@@ -7,13 +7,18 @@ type NewListing = Omit<
   'id' | 'ownerId' | 'ownerName' | 'ownerLodge' | 'ownerVerified' | 'phone' | 'createdAt'
 >;
 
+type PendingRegistration = Omit<Member, 'id' | 'status' | 'cimMasked'> & {
+  cim: string;
+  password: string;
+};
+
 type AppContextValue = {
   member: Member | null;
   status: MemberStatus;
   listings: Listing[];
   favorites: string[];
   loginDemo: () => void;
-  registerPending: (member: Omit<Member, 'id' | 'status' | 'cimMasked'> & { cim: string }) => void;
+  registerPending: (member: PendingRegistration) => void;
   logout: () => void;
   toggleFavorite: (listingId: string) => void;
   createListing: (listing: NewListing) => Listing;
