@@ -2,7 +2,7 @@
   "expo": {
     "name": "Connexio",
     "slug": "connexio",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "orientation": "portrait",
     "scheme": "connexio",
     "userInterfaceStyle": "dark",
@@ -19,7 +19,17 @@
     "web": {
       "output": "static"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O Connexio acessa suas fotos para adicionar imagens às suas ofertas.",
+          "cameraPermission": "O Connexio usa a câmera para fotografar produtos, serviços e negócios.",
+          "microphonePermission": false
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     }
