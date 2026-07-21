@@ -1,7 +1,9 @@
 import { Button } from '@/components/Button';
 import { FormField } from '@/components/FormField';
+import { LegalConsent } from '@/components/LegalConsent';
 import { Screen } from '@/components/Screen';
 import { useApp } from '@/context/AppContext';
+import { CONNEXIO } from '@/lib/constants';
 import { friendlyError } from '@/lib/errors';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/theme/colors';
@@ -21,6 +23,7 @@ const initialForm = {
 export default function RegisterScreen() {
   const { registerPending } = useApp();
   const [form, setForm] = useState(initialForm);
+  const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const set = (key: keyof typeof form) => (value: string) => setForm((current) => ({ ...current, [key]: value }));
 
@@ -28,6 +31,10 @@ export default function RegisterScreen() {
     const required = [form.name, form.email, form.whatsapp, form.cim, form.password, form.confirmPassword];
     if (required.some((value) => !value.trim())) {
       Alert.alert('Cadastro incompleto', 'Preencha os campos para criar sua conta.');
+      return;
+    }
+    if (!accepted) {
+      Alert.alert('Aceite necessário', 'Leia e aceite os Termos de Uso e a Política de Privacidade.');
       return;
     }
     if (form.cim.replace(/\D/g, '').length < 4) {
@@ -57,17 +64,14 @@ export default function RegisterScreen() {
             full_name: form.name.trim(),
             phone,
             cim,
+            terms_version: CONNEXIO.termsVersion,
+            privacy_version: CONNEXIO.privacyVersion,
           },
         },
       });
       if (error) throw error;
 
-      registerPending({
-        name: form.name.trim(),
-        email,
-        whatsapp: phone,
-        cim,
-      });
+      registerPending({ name: form.name.trim(), email, whatsapp: phone, cim });
 
       if (!data.session) {
         Alert.alert(
@@ -100,9 +104,9 @@ export default function RegisterScreen() {
         <FormField label="Número do CIM" value={form.cim} onChangeText={set('cim')} keyboardType="number-pad" hint="O CIM é privado e será usado somente na validação." />
         <FormField label="Senha" value={form.password} onChangeText={set('password')} secureTextEntry autoCapitalize="none" autoComplete="new-password" />
         <FormField label="Confirmar senha" value={form.confirmPassword} onChangeText={set('confirmPassword')} secureTextEntry autoCapitalize="none" autoComplete="new-password" />
+        <LegalConsent accepted={accepted} onChange={setAccepted} />
         <Button label="Criar conta" onPress={() => void submit()} loading={loading} />
       </View>
-      <Text style={styles.legal}>Ao continuar, você declara que as informações são verdadeiras e aceita os termos de uso e privacidade.</Text>
     </Screen>
   );
 }
@@ -114,5 +118,4 @@ const styles = StyleSheet.create({
   title: { color: colors.cream, fontSize: 30, fontWeight: '800' },
   subtitle: { color: colors.textMuted, fontSize: 15, lineHeight: 22 },
   form: { gap: 17 },
-  legal: { color: colors.textMuted, fontSize: 12, lineHeight: 18, textAlign: 'center' },
 });
