@@ -1,6 +1,14 @@
 export type ListingType = 'BUSINESS' | 'SERVICE' | 'PRODUCT';
 export type PriceType = 'FIXED' | 'FROM' | 'ON_REQUEST';
 export type MemberStatus = 'GUEST' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+export type ListingStatus =
+  | 'DRAFT'
+  | 'PENDING_MEMBER_APPROVAL'
+  | 'PENDING_REVIEW'
+  | 'PUBLISHED'
+  | 'PAUSED'
+  | 'REJECTED'
+  | 'REMOVED';
 
 export type Listing = {
   id: string;
@@ -12,6 +20,7 @@ export type Listing = {
   title: string;
   description: string;
   category: string;
+  categorySlug?: string;
   city: string;
   region: string;
   price?: number;
@@ -20,6 +29,9 @@ export type Listing = {
   website?: string;
   contactEmail?: string;
   phone: string;
+  imageUrl?: string;
+  status?: ListingStatus;
+  isPreview?: boolean;
   createdAt: string;
   featured?: boolean;
 };
