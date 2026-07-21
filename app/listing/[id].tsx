@@ -1,3 +1,4 @@
+import { Button } from '@/components/Button';
 import { ContactButton } from '@/components/ContactButton';
 import { ContactLock } from '@/components/ContactLock';
 import { OfferContact } from '@/components/OfferContact';
@@ -11,7 +12,7 @@ import { friendlyError } from '@/lib/errors';
 import { listingPriceLabel, listingTypeLabel } from '@/lib/format';
 import { colors } from '@/theme/colors';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function ListingDetailScreen() {
@@ -79,11 +80,10 @@ export default function ListingDetailScreen() {
 
       <OfferOwnerCard listing={listing} />
 
-      {contactAllowed ? (
-        <OfferContact email={listing.contactEmail} phone={listing.phone} website={listing.website} />
-      ) : null}
+      {contactAllowed ? <OfferContact email={listing.contactEmail} phone={listing.phone} website={listing.website} /> : null}
       {contactAllowed ? <WebsiteButton url={listing.website} /> : null}
       {!own ? <ContactButton listing={listing} allowed={contactAllowed} /> : null}
+      {!own && published ? <Button label="Denunciar esta oferta" variant="ghost" onPress={() => router.push({ pathname: '/report/[id]', params: { id: listing.id } })} /> : null}
 
       <Text style={styles.disclaimer}>A negociação acontece diretamente entre os membros. O Connexio não processa pagamentos nesta fase.</Text>
     </Screen>
