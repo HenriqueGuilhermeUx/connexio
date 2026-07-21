@@ -1,26 +1,11 @@
+import { ListingStatusChip } from '@/components/ListingStatusChip';
+import { OfferImage } from '@/components/OfferImage';
+import { listingPriceLabel, listingTypeLabel } from '@/lib/format';
 import { colors } from '@/theme/colors';
 import { Listing } from '@/types';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-
-function priceLabel(listing: Listing) {
-  if (listing.priceType === 'ON_REQUEST' || listing.price === undefined) return 'Sob consulta';
-  const value = listing.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  return listing.priceType === 'FROM' ? `A partir de ${value}` : value;
-}
-
-function typeLabel(listing: Listing) {
-  if (listing.type === 'BUSINESS') return 'Loja / negócio';
-  if (listing.type === 'SERVICE') return 'Serviço';
-  return 'Produto';
-}
-
-function typeIcon(listing: Listing): keyof typeof MaterialCommunityIcons.glyphMap {
-  if (listing.type === 'BUSINESS') return 'storefront-outline';
-  if (listing.type === 'SERVICE') return 'briefcase-outline';
-  return 'shopping-outline';
-}
 
 type Props = {
   listing: Listing;
@@ -34,36 +19,35 @@ export function ListingCard({ listing, favorite, onToggleFavorite }: Props) {
       onPress={() => router.push({ pathname: '/listing/[id]', params: { id: listing.id } })}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
-      <View style={styles.visual}>
-        <MaterialCommunityIcons name={typeIcon(listing)} size={34} color={colors.gold} />
-        {listing.featured ? <Text style={styles.featured}>Destaque</Text> : null}
-        <Pressable
-          accessibilityLabel={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-          hitSlop={10}
-          onPress={(event) => {
-            event.stopPropagation();
-            onToggleFavorite();
-          }}
-          style={styles.favorite}
-        >
-          <Feather name="heart" size={20} color={favorite ? colors.gold : colors.textMuted} />
-        </Pressable>
-      </View>
+      <OfferImage uri={listing.imageUrl} type={listing.type} style={styles.visual} iconSize={34} />
+      {listing.featured ? <Text style={styles.featured}>Destaque</Text> : null}
+      <Pressable
+        accessibilityLabel={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+        hitSlop={10}
+        onPress={(event) => {
+          event.stopPropagation();
+          onToggleFavorite();
+        }}
+        style={styles.favorite}
+      >
+        <Feather name="heart" size={20} color={favorite ? colors.gold : colors.textMuted} />
+      </Pressable>
 
       <View style={styles.body}>
+        {listing.status && listing.status !== 'PUBLISHED' ? <ListingStatusChip status={listing.status} /> : null}
         <View style={styles.metaRow}>
           <Text style={styles.category}>{listing.category}</Text>
-          <Text style={styles.type}>{typeLabel(listing)}</Text>
+          <Text style={styles.type}>{listingTypeLabel(listing.type)}</Text>
         </View>
         <Text style={styles.title} numberOfLines={2}>{listing.title}</Text>
         <View style={styles.locationRow}>
           <Feather name="map-pin" size={14} color={colors.textMuted} />
           <Text style={styles.location}>{listing.city} · {listing.region}</Text>
         </View>
-        <Text style={styles.price}>{priceLabel(listing)}</Text>
+        <Text style={styles.price}>{listingPriceLabel(listing)}</Text>
         {listing.benefit ? <Text style={styles.benefit} numberOfLines={2}>{listing.benefit}</Text> : null}
         <View style={styles.ownerRow}>
-          <View style={styles.avatar}><Text style={styles.avatarText}>{listing.ownerName[0]}</Text></View>
+          <View style={styles.avatar}><Text style={styles.avatarText}>{listing.ownerName[0] || 'C'}</Text></View>
           <View style={styles.ownerText}>
             <View style={styles.verifiedRow}>
               <Text style={styles.ownerName}>{listing.ownerName}</Text>
@@ -80,9 +64,9 @@ export function ListingCard({ listing, favorite, onToggleFavorite }: Props) {
 const styles = StyleSheet.create({
   card: { borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   pressed: { opacity: 0.9, transform: [{ scale: 0.995 }] },
-  visual: { height: 112, backgroundColor: colors.surfaceRaised, padding: 18, justifyContent: 'flex-end' },
+  visual: { height: 150 },
   featured: { position: 'absolute', left: 14, top: 14, color: colors.background, backgroundColor: colors.gold, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, fontSize: 11, fontWeight: '800' },
-  favorite: { position: 'absolute', top: 14, right: 14, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(8,21,38,0.74)', alignItems: 'center', justifyContent: 'center' },
+  favorite: { position: 'absolute', top: 14, right: 14, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(8,21,38,0.78)', alignItems: 'center', justifyContent: 'center' },
   body: { padding: 16, gap: 9 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   category: { color: colors.goldSoft, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6, flex: 1 },
