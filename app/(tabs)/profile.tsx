@@ -5,10 +5,11 @@ import { ProfileHeader } from '@/components/ProfileHeader';
 import { ProfileInfoCard } from '@/components/ProfileInfoCard';
 import { ProfileStats } from '@/components/ProfileStats';
 import { Screen } from '@/components/Screen';
+import { SectionHeader } from '@/components/SectionHeader';
 import { VerificationNotice } from '@/components/VerificationNotice';
 import { useApp } from '@/context/AppContext';
 import { router } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export default function ProfileScreen() {
   const { member, listings, isAdmin, logout } = useApp();
@@ -34,8 +35,18 @@ export default function ProfileScreen() {
         { icon: 'map-pin', label: 'Região', value: member.region || 'Ainda não informada' },
       ]} />
       <OwnOffersSection listings={ownListings} />
+
       {isAdmin ? <Button label="Abrir painel administrativo" variant="secondary" onPress={() => router.push('/admin')} /> : null}
-      <Button label="Sair da conta" variant="danger" onPress={() => void leave()} />
+
+      <View style={styles.section}>
+        <SectionHeader title="Segurança e privacidade" subtitle="Controle sua senha, seus dados e sua conta." />
+        <Button label="Recuperar ou trocar senha" variant="secondary" onPress={() => router.push('/forgot-password')} />
+        <Button label="Política de Privacidade" variant="secondary" onPress={() => router.push('/privacy')} />
+        <Button label="Termos de Uso" variant="secondary" onPress={() => router.push('/terms')} />
+        <Button label="Excluir minha conta" variant="danger" onPress={() => router.push('/delete-account')} />
+      </View>
+
+      <Button label="Sair da conta" variant="ghost" onPress={() => void leave()} />
       <DeveloperCredit />
     </Screen>
   );
@@ -43,4 +54,5 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingTop: 22, gap: 25 },
+  section: { gap: 11 },
 });
