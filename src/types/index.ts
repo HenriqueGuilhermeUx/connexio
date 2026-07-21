@@ -1,6 +1,6 @@
-export type ListingType = 'SERVICE' | 'PRODUCT';
+export type ListingType = 'BUSINESS' | 'SERVICE' | 'PRODUCT';
 export type PriceType = 'FIXED' | 'FROM' | 'ON_REQUEST';
-export type MemberStatus = 'GUEST' | 'PENDING' | 'APPROVED';
+export type MemberStatus = 'GUEST' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
 
 export type Listing = {
   id: string;
@@ -17,6 +17,8 @@ export type Listing = {
   price?: number;
   priceType: PriceType;
   benefit?: string;
+  website?: string;
+  contactEmail?: string;
   phone: string;
   createdAt: string;
   featured?: boolean;
