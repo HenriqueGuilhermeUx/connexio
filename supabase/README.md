@@ -1,35 +1,37 @@
 # Configuração do Supabase sem terminal
 
-## 1. Migration inicial — concluída
+## 1. Migrations já executadas
 
-A migration `20260721170000_access_foundation.sql` cria perfis, validação privada de CIM, categorias, ofertas, contatos, favoritos, administração, auditoria e políticas RLS.
+As migrations abaixo devem ser executadas uma única vez, em ordem:
 
-Quando o SQL Editor mostra **No rows detected** sem erro em vermelho, a execução de comandos de estrutura foi concluída normalmente: essas instruções não retornam linhas.
+1. `20260721170000_access_foundation.sql`;
+2. `20260721190000_full_onboarding.sql`.
 
-## 2. Executar a migration incremental
+Quando o SQL Editor mostra **No rows detected** sem erro em vermelho, os comandos estruturais foram concluídos normalmente.
 
-Como o modelo de onboarding evoluiu, execute também:
+## 2. Executar a migration do catálogo real
 
-`supabase/migrations/20260721190000_full_onboarding.sql`
+Execute agora:
+
+`supabase/migrations/20260721210000_catalog_storage_admin.sql`
 
 Passos:
 
 1. No GitHub, abra o repositório `connexio`.
 2. Selecione a branch `agent/supabase-foundation`.
 3. Abra `supabase` → `migrations`.
-4. Abra `20260721190000_full_onboarding.sql`.
+4. Abra `20260721210000_catalog_storage_admin.sql`.
 5. Clique em **Raw** e copie tudo.
 6. No Supabase, abra **SQL Editor** → **New query**.
 7. Cole e clique em **Run** uma vez.
 
-Essa migration:
+Ela cria:
 
-- preserva todos os dados preenchidos pelo membro pendente;
-- mantém a oferta privada até aprovação;
-- permite registrar contatos próprios sem revelá-los a terceiros;
-- amplia os segmentos;
-- cria a fila auditável de notificações administrativas;
-- registra perfil e CIM automaticamente durante o cadastro do Auth.
+- tabela e políticas de imagens das ofertas;
+- bucket privado `listing-images`;
+- leitura segura das imagens por status do membro;
+- filas reais de membros e ofertas para o painel administrativo;
+- permissões para upload, ordenação e exclusão de imagens.
 
 ## 3. Permitir entrada imediata no piloto
 
@@ -40,57 +42,52 @@ Essa migration:
 5. Desative temporariamente **Confirm email**.
 6. Salve.
 
-A confirmação de e-mail pode voltar antes da abertura pública. A migration incremental já permite criar a solicitação de validação mesmo quando não há sessão imediata.
+A confirmação de e-mail poderá voltar antes da abertura pública.
 
-## 4. Criar o primeiro administrador
+## 4. Criar e liberar o administrador fundador
 
-Primeiro, crie sua conta pelo Connexio. Depois:
+1. Abra o Connexio na branch `agent/supabase-foundation`.
+2. Crie a conta usando `henriquecampos66@gmail.com`.
+3. No GitHub, abra `supabase/setup/bootstrap_owner.sql`.
+4. Clique em **Raw** e copie tudo.
+5. No Supabase, abra **SQL Editor** → **New query**.
+6. Cole e clique em **Run** uma vez.
 
-1. Abra **SQL Editor**.
-2. Crie uma consulta.
-3. Substitua o e-mail abaixo pelo e-mail da sua conta.
-4. Clique em **Run**.
+O resultado esperado é uma linha com:
 
-```sql
-insert into public.app_admins (user_id)
-select id from public.profiles where email = 'SEU_EMAIL_AQUI'
-on conflict (user_id) do nothing;
-```
+- `status = APPROVED`;
+- `is_admin = true`.
 
-## 5. Aviso por e-mail de novo cadastro
+O script não cria usuário nem senha. Ele apenas promove a conta já criada e vinculada ao e-mail correto.
+
+## 5. Teste operacional
+
+Depois do bootstrap:
+
+1. saia e entre novamente no Connexio;
+2. abra **Perfil**;
+3. confirme o selo `MEMBRO VERIFICADO`;
+4. confirme o botão **Abrir painel administrativo**;
+5. publique uma oferta completa com foto;
+6. abra o painel e publique a oferta;
+7. crie uma segunda conta para testar a fila de validação e o catálogo limitado.
+
+## 6. Aviso por e-mail de novo cadastro — pode ser feito depois
 
 A função está em:
 
 `supabase/functions/notify-new-member/index.ts`
 
-Ela usa Resend, conforme o exemplo oficial de envio de e-mails em Supabase Edge Functions.
-
-### Secrets necessários
-
-No Supabase, abra **Edge Functions** → **Secrets** e adicione:
+Secrets necessários:
 
 - `RESEND_API_KEY`;
-- `ADMIN_NOTIFICATION_EMAIL`;
-- `MAIL_FROM` — no piloto pode ser `Connexio <onboarding@resend.dev>`;
-- `CONNEXIO_WEBHOOK_SECRET` — uma senha longa criada somente para o webhook.
+- `ADMIN_NOTIFICATION_EMAIL=henriquecampos66@gmail.com`;
+- `MAIL_FROM`;
+- `CONNEXIO_WEBHOOK_SECRET`.
 
-Os secrets `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` já são disponibilizados pelo ambiente hospedado da Edge Function.
+Depois de publicar a função, crie um Database Webhook na tabela `admin_notification_outbox`, evento `INSERT`, enviando o header `x-webhook-secret`.
 
-### Webhook
-
-Depois de publicar a função:
-
-1. Abra **Database** → **Webhooks**.
-2. Crie `notify-new-member`.
-3. Tabela: `admin_notification_outbox`.
-4. Evento: `INSERT`.
-5. Método: `POST`.
-6. URL: endereço da Edge Function `notify-new-member`.
-7. Header: `x-webhook-secret` com o mesmo valor de `CONNEXIO_WEBHOOK_SECRET`.
-
-O e-mail será enviado uma vez por cadastro, e o evento ficará marcado como `SENT` ou `FAILED`.
-
-## 6. Regra de chaves
+## 7. Regra de chaves
 
 O aplicativo usa somente:
 
