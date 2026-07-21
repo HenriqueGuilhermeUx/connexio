@@ -45,6 +45,7 @@ export default function PublishScreen() {
   };
 
   const submit = async () => {
+    const currentMember = member;
     const validation = validateListingForm({ title, description, city, region, price, priceType });
     if (validation) {
       Alert.alert('Confira sua oferta', validation);
@@ -54,7 +55,7 @@ export default function PublishScreen() {
       Alert.alert('Escolha um segmento', 'Selecione o segmento que melhor representa sua oferta.');
       return;
     }
-    if (!member?.whatsapp) {
+    if (!currentMember?.whatsapp) {
       Alert.alert('WhatsApp necessário', 'Inclua um telefone/WhatsApp válido na sua conta.');
       return;
     }
@@ -73,10 +74,10 @@ export default function PublishScreen() {
         benefit: benefit.trim() || undefined,
         website: website.trim() || undefined,
         contactEmail: contactEmail.trim() || undefined,
-        whatsapp: member.whatsapp,
+        whatsapp: currentMember.whatsapp,
       }, photos);
 
-      const pending = member.status !== 'APPROVED';
+      const pending = currentMember.status !== 'APPROVED';
       reset();
       Alert.alert(
         pending ? 'Oferta salva com sucesso' : 'Oferta enviada para revisão',
