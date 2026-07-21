@@ -196,6 +196,7 @@ export async function loadAdminMemberQueue() {
   const { data, error } = await supabase
     .from('admin_member_queue')
     .select('*')
+    .eq('status', 'PENDING')
     .order('submitted_at', { ascending: true });
   if (error) throw error;
   return (data ?? []) as AdminMemberQueueRecord[];
