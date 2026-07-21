@@ -20,10 +20,16 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ title: 'Entrar' }} />
         <Stack.Screen name="register" options={{ title: 'Criar conta' }} />
+        <Stack.Screen name="forgot-password" options={{ title: 'Recuperar senha' }} />
+        <Stack.Screen name="reset-password" options={{ title: 'Nova senha' }} />
+        <Stack.Screen name="privacy" options={{ title: 'Privacidade' }} />
+        <Stack.Screen name="terms" options={{ title: 'Termos de Uso' }} />
+        <Stack.Screen name="delete-account" options={{ title: 'Excluir conta' }} />
         <Stack.Screen name="pending" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="listing/[id]" options={{ title: 'Oferta' }} />
-        <Stack.Screen name="admin" options={{ title: 'Validação de membros' }} />
+        <Stack.Screen name="report/[id]" options={{ title: 'Denunciar oferta' }} />
+        <Stack.Screen name="admin" options={{ title: 'Administração' }} />
       </Stack>
     </AppProvider>
   );
