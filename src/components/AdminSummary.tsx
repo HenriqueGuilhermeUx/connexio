@@ -2,14 +2,14 @@ import { colors } from '@/theme/colors';
 import { Feather } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
-export function AdminSummary({ members, listings }: { members: number; listings: number }) {
+export function AdminSummary({ members, listings, reports }: { members: number; listings: number; reports: number }) {
   return (
     <View style={styles.container}>
       <View style={styles.icon}><Feather name="shield" size={24} color={colors.gold} /></View>
       <View style={styles.copy}>
-        <Text style={styles.value}>{members + listings}</Text>
+        <Text style={styles.value}>{members + listings + reports}</Text>
         <Text style={styles.label}>itens aguardando decisão</Text>
-        <Text style={styles.detail}>{members} membros · {listings} ofertas</Text>
+        <Text style={styles.detail}>{members} membros · {listings} ofertas · {reports} denúncias</Text>
       </View>
     </View>
   );
