@@ -9,6 +9,8 @@ export type DbListingStatus =
   | 'REMOVED';
 export type DbListingType = 'BUSINESS' | 'SERVICE' | 'PRODUCT';
 export type DbPriceType = 'FIXED' | 'FROM' | 'ON_REQUEST';
+export type DbReportStatus = 'OPEN' | 'REVIEWING' | 'RESOLVED' | 'DISMISSED';
+export type ReportReason = 'INAPPROPRIATE' | 'MISLEADING' | 'FRAUD' | 'DUPLICATE' | 'OTHER';
 
 export type CategoryRecord = {
   slug: string;
@@ -110,4 +112,19 @@ export type AdminListingQueueRecord = {
   is_preview: boolean;
   created_at: string;
   image_count: number;
+};
+
+export type AdminReportQueueRecord = {
+  id: string;
+  listing_id: string;
+  listing_title: string;
+  owner_id: string;
+  owner_name: string;
+  reporter_id: string;
+  reporter_name: string;
+  reporter_email: string;
+  reason: ReportReason;
+  details: string | null;
+  status: DbReportStatus;
+  created_at: string;
 };
