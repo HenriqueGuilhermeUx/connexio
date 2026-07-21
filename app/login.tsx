@@ -2,6 +2,7 @@ import { Button } from '@/components/Button';
 import { FormField } from '@/components/FormField';
 import { Screen } from '@/components/Screen';
 import { useApp } from '@/context/AppContext';
+import { friendlyError } from '@/lib/errors';
 import { colors } from '@/theme/colors';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -28,8 +29,7 @@ export default function LoginScreen() {
       }
       router.replace(member.status === 'PENDING' ? '/pending' : '/(tabs)');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Confira seu e-mail e senha.';
-      Alert.alert('Não foi possível entrar', message);
+      Alert.alert('Não foi possível entrar', friendlyError(error, 'Confira seu e-mail e senha.'));
     } finally {
       setLoading(false);
     }
@@ -44,7 +44,10 @@ export default function LoginScreen() {
       <View style={styles.form}>
         <FormField label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" />
         <FormField label="Senha" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoComplete="current-password" />
-        <Button label={loading ? 'Entrando...' : 'Entrar no Connexio'} onPress={handleLogin} disabled={loading} />
+        <Pressable onPress={() => router.push('/forgot-password')}>
+          <Text style={styles.forgot}>Esqueci minha senha</Text>
+        </Pressable>
+        <Button label="Entrar no Connexio" onPress={() => void handleLogin()} loading={loading} />
         <Pressable onPress={() => router.push('/onboarding')}>
           <Text style={styles.create}>Ainda não tenho conta</Text>
         </Pressable>
@@ -62,7 +65,8 @@ const styles = StyleSheet.create({
   intro: { gap: 8 },
   title: { color: colors.cream, fontSize: 30, fontWeight: '800' },
   subtitle: { color: colors.textMuted, fontSize: 15, lineHeight: 22 },
-  form: { gap: 18 },
+  form: { gap: 15 },
+  forgot: { color: colors.goldSoft, fontSize: 12, fontWeight: '800', textAlign: 'right' },
   create: { color: colors.goldSoft, fontSize: 13, fontWeight: '800', textAlign: 'center', paddingVertical: 8 },
   infoBox: { padding: 16, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 6 },
   infoTitle: { color: colors.goldSoft, fontSize: 13, fontWeight: '800' },
