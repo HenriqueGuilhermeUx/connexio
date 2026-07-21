@@ -1,4 +1,5 @@
 import { Button } from '@/components/Button';
+import { DeveloperCredit } from '@/components/DeveloperCredit';
 import { Screen } from '@/components/Screen';
 import { useApp } from '@/context/AppContext';
 import { colors } from '@/theme/colors';
@@ -9,6 +10,7 @@ import { StyleSheet, Text, View } from 'react-native';
 export default function ProfileScreen() {
   const { member, listings, logout } = useApp();
   const ownListings = listings.filter((listing) => listing.ownerId === member?.id);
+  const approved = member?.status === 'APPROVED';
 
   const leave = () => {
     logout();
@@ -22,36 +24,52 @@ export default function ProfileScreen() {
         <View style={styles.profileCopy}>
           <View style={styles.nameRow}>
             <Text style={styles.name}>{member?.name ?? 'Membro Connexio'}</Text>
-            <MaterialCommunityIcons name="check-decagram" size={19} color={colors.gold} />
+            {approved ? <MaterialCommunityIcons name="check-decagram" size={19} color={colors.gold} /> : null}
           </View>
           <Text style={styles.lodge}>{member?.lodge}</Text>
-          <View style={styles.verifiedPill}><Text style={styles.verifiedText}>MEMBRO VERIFICADO</Text></View>
+          <View style={[styles.statusPill, approved ? styles.verifiedPill : styles.pendingPill]}>
+            <Text style={[styles.statusText, approved ? styles.verifiedText : styles.pendingText]}>
+              {approved ? 'MEMBRO VERIFICADO' : 'VALIDAÇÃO EM ANDAMENTO'}
+            </Text>
+          </View>
         </View>
       </View>
 
       <View style={styles.stats}>
-        <View style={styles.stat}><Text style={styles.statValue}>{ownListings.length}</Text><Text style={styles.statLabel}>Anúncios</Text></View>
+        <View style={styles.stat}><Text style={styles.statValue}>{ownListings.length}</Text><Text style={styles.statLabel}>Ofertas</Text></View>
         <View style={styles.statDivider} />
-        <View style={styles.stat}><Text style={styles.statValue}>{member?.city ?? '—'}</Text><Text style={styles.statLabel}>Cidade</Text></View>
+        <View style={styles.stat}><Text style={styles.statValue}>{member?.city || '—'}</Text><Text style={styles.statLabel}>Cidade</Text></View>
       </View>
 
+      {!approved ? (
+        <View style={styles.notice}>
+          <MaterialCommunityIcons name="shield-clock-outline" size={22} color={colors.warning} />
+          <Text style={styles.noticeText}>Você pode completar seus dados e cadastrar ofertas. Contatos e publicação pública serão liberados após a validação.</Text>
+        </View>
+      ) : null}
+
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Dados validados</Text>
+        <Text style={styles.sectionTitle}>Minha conta</Text>
         <View style={styles.infoCard}>
           <InfoRow icon="mail" label="E-mail" value={member?.email ?? ''} />
           <InfoRow icon="phone" label="WhatsApp" value={member?.whatsapp ?? ''} />
           <InfoRow icon="shield" label="CIM" value={member?.cimMasked ?? ''} />
-          <InfoRow icon="map-pin" label="Região" value={member?.region ?? ''} />
+          <InfoRow icon="map-pin" label="Região" value={member?.region || 'Ainda não informada'} />
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Operação</Text>
-        <Button label="Abrir painel administrativo" variant="secondary" onPress={() => router.push('/admin')} />
-        <Text style={styles.adminNote}>Acesso visível apenas no protótipo para validar o fluxo de aprovação.</Text>
-      </View>
+      {approved ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Operação</Text>
+          <Button label="Abrir painel administrativo" variant="secondary" onPress={() => router.push('/admin')} />
+          <Text style={styles.adminNote}>Este acesso será restrito aos administradores cadastrados no banco.</Text>
+        </View>
+      ) : (
+        <Button label="Voltar ao resumo da validação" variant="secondary" onPress={() => router.push('/pending')} />
+      )}
 
       <Button label="Sair da conta" variant="danger" onPress={leave} />
+      <DeveloperCredit />
     </Screen>
   );
 }
@@ -74,13 +92,19 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   name: { color: colors.cream, fontSize: 22, fontWeight: '800', flexShrink: 1 },
   lodge: { color: colors.textMuted, fontSize: 12 },
-  verifiedPill: { alignSelf: 'flex-start', marginTop: 3, backgroundColor: 'rgba(209,174,87,0.12)', borderRadius: 999, borderWidth: 1, borderColor: colors.gold, paddingHorizontal: 9, paddingVertical: 5 },
-  verifiedText: { color: colors.goldSoft, fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
+  statusPill: { alignSelf: 'flex-start', marginTop: 3, borderRadius: 999, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 5 },
+  verifiedPill: { backgroundColor: 'rgba(209,174,87,0.12)', borderColor: colors.gold },
+  pendingPill: { backgroundColor: 'rgba(241,200,107,0.08)', borderColor: colors.warning },
+  statusText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
+  verifiedText: { color: colors.goldSoft },
+  pendingText: { color: colors.warning },
   stats: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 17 },
   stat: { flex: 1, alignItems: 'center', gap: 4 },
   statValue: { color: colors.text, fontSize: 17, fontWeight: '800' },
   statLabel: { color: colors.textMuted, fontSize: 11 },
   statDivider: { width: 1, backgroundColor: colors.border },
+  notice: { flexDirection: 'row', gap: 10, padding: 15, borderRadius: 16, backgroundColor: 'rgba(241,200,107,0.08)', borderWidth: 1, borderColor: 'rgba(241,200,107,0.28)' },
+  noticeText: { color: colors.textMuted, fontSize: 12, lineHeight: 18, flex: 1 },
   section: { gap: 12 },
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '800' },
   infoCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, overflow: 'hidden' },
