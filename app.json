@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Connexio",
+    "slug": "connexio",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "connexio",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "br.com.connexio.app"
+    },
+    "android": {
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "br.com.connexio.app"
+    },
+    "web": {
+      "output": "static"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "Connexio Expo",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-20-bookworm",
+  "postCreateCommand": "npm install",
+  "forwardPorts": [8081, 19000, 19001, 19002],
+  "portsAttributes": {
+    "8081": {
+      "label": "Connexio Web",
+      "onAutoForward": "openBrowser"
+    },
+    "19000": {
+      "label": "Expo Dev Server",
+      "onAutoForward": "silent"
+    },
+    "19001": {
+      "label": "Expo Dev Tools",
+      "onAutoForward": "silent"
+    },
+    "19002": {
+      "label": "Expo Metro",
+      "onAutoForward": "silent"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "expo.vscode-expo-tools",
+        "dbaeumer.vscode-eslint"
+      ]
+    },
+    "codespaces": {
+      "openFiles": [
+        "README.md",
+        "app/welcome.tsx"
+      ]
+    }
+  },
+  "remoteUser": "node"
+}

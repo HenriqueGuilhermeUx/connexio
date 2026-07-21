@@ -31,7 +31,26 @@ Este repositório contém um protótipo funcional em Expo/React Native, sem back
 
 > Em julho de 2026, durante a transição para o SDK 57, o template SDK 54 permanece indicado pela documentação do Expo para testes no Expo Go em dispositivo físico. A evolução para development build e SDK 57 está registrada no roadmap.
 
-## Como executar
+## Executar sem terminal — recomendado
+
+O projeto possui um ambiente GitHub Codespaces configurado. Não é necessário instalar Node, Git, Expo CLI ou digitar comandos.
+
+1. Abra o repositório no GitHub e selecione a branch `agent/bootstrap-mvp`.
+2. Clique em **Code**.
+3. Abra a aba **Codespaces**.
+4. Clique em **Create codespace on agent/bootstrap-mvp**.
+5. Aguarde o VS Code abrir no navegador. A instalação das dependências acontece automaticamente.
+6. No menu superior do VS Code, clique em **Terminal > Run Task...**.
+7. Escolha uma das tarefas:
+   - **Connexio: abrir no navegador** — melhor opção para o primeiro teste;
+   - **Connexio: iniciar no celular (Expo Go)** — gera um QR code para escanear com o Expo Go;
+   - **Connexio: validar projeto** — verifica TypeScript e ESLint.
+
+Na opção web, o Codespaces encaminha a porta do aplicativo e abre a prévia automaticamente. Caso não abra, use a aba **Ports**, localize `Connexio Web` e clique no ícone de globo.
+
+Na opção Expo Go, mantenha o Codespace aberto enquanto usa o aplicativo. O modo túnel depende da disponibilidade do serviço de túnel do Expo/ngrok; se ele estiver indisponível, use a prévia web.
+
+## Executar localmente — alternativa técnica
 
 ```bash
 npm install
