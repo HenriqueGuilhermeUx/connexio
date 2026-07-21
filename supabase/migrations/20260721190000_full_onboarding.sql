@@ -1,5 +1,40 @@
 begin;
 
+-- O cadastro do Auth cria perfil e solicitação de validação na mesma operação.
+-- O CIM chega somente pelos metadados do cadastro e é persistido na tabela privada.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  normalized_cim text;
+begin
+  insert into public.profiles (id, email, full_name, phone)
+  values (
+    new.id,
+    coalesce(new.email, ''),
+    coalesce(new.raw_user_meta_data ->> 'full_name', ''),
+    coalesce(new.raw_user_meta_data ->> 'phone', '')
+  )
+  on conflict (id) do update
+  set email = excluded.email,
+      full_name = excluded.full_name,
+      phone = excluded.phone;
+
+  normalized_cim := regexp_replace(coalesce(new.raw_user_meta_data ->> 'cim', ''), '[^0-9]', '', 'g');
+
+  if char_length(normalized_cim) >= 4 then
+    insert into public.member_verifications (user_id, cim_number, cim_last4)
+    values (new.id, normalized_cim, right(normalized_cim, 4))
+    on conflict (user_id) do nothing;
+  end if;
+
+  return new;
+end;
+$$;
+
 -- O membro pendente pode preencher a oferta completa. A proteção acontece pela
 -- visibilidade e pelos estados, não pela perda dos dados informados no onboarding.
 create or replace function public.apply_listing_submission_rules()
