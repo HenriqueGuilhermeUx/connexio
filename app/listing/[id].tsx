@@ -9,19 +9,28 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { listings, favorites, toggleFavorite } = useApp();
+  const { member, listings, favorites, toggleFavorite } = useApp();
   const listing = listings.find((item) => item.id === id);
 
   if (!listing) {
     return <Screen><Text style={styles.title}>Oferta não encontrada.</Text></Screen>;
   }
 
+  const approved = member?.status === 'APPROVED';
   const favorite = favorites.includes(listing.id);
   const price = listing.price === undefined || listing.priceType === 'ON_REQUEST'
     ? 'Sob consulta'
     : `${listing.priceType === 'FROM' ? 'A partir de ' : ''}${listing.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
 
   const openWhatsApp = async () => {
+    if (!approved) {
+      Alert.alert(
+        'Contato protegido',
+        'O WhatsApp e os demais contatos serão liberados assim que sua identificação for validada.',
+      );
+      return;
+    }
+
     const message = `Olá, ${listing.ownerName}. Vi sua oferta “${listing.title}” no Connexio e gostaria de mais informações.`;
     const url = `https://wa.me/${listing.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     const supported = await Linking.canOpenURL(url);
@@ -40,6 +49,13 @@ export default function ListingDetailScreen() {
           <Feather name="heart" size={22} color={favorite ? colors.gold : colors.textMuted} />
         </Pressable>
       </View>
+
+      {!approved ? (
+        <View style={styles.previewNotice}>
+          <MaterialCommunityIcons name="eye-lock-outline" size={21} color={colors.warning} />
+          <Text style={styles.previewText}>Você está vendo uma prévia. Os meios de contato serão liberados após sua aprovação.</Text>
+        </View>
+      ) : null}
 
       <View style={styles.metaRow}>
         <Text style={styles.category}>{listing.category}</Text>
@@ -64,13 +80,18 @@ export default function ListingDetailScreen() {
       <View style={styles.ownerCard}>
         <View style={styles.avatar}><Text style={styles.avatarText}>{listing.ownerName[0]}</Text></View>
         <View style={styles.ownerCopy}>
-          <View style={styles.ownerNameRow}><Text style={styles.ownerName}>{listing.ownerName}</Text><MaterialCommunityIcons name="check-decagram" size={18} color={colors.gold} /></View>
+          <View style={styles.ownerNameRow}>
+            <Text style={styles.ownerName}>{listing.ownerName}</Text>
+            {listing.ownerVerified ? <MaterialCommunityIcons name="check-decagram" size={18} color={colors.gold} /> : null}
+          </View>
           <Text style={styles.lodge}>{listing.ownerLodge}</Text>
-          <Text style={styles.verified}>Identidade e vínculo validados</Text>
+          <Text style={listing.ownerVerified ? styles.verified : styles.pendingOwner}>
+            {listing.ownerVerified ? 'Identidade e vínculo validados' : 'Oferta aguardando validação'}
+          </Text>
         </View>
       </View>
 
-      <Button label="Falar no WhatsApp" onPress={openWhatsApp} />
+      <Button label={approved ? 'Falar no WhatsApp' : 'Contato após validação'} onPress={openWhatsApp} variant={approved ? 'primary' : 'secondary'} />
       <Text style={styles.disclaimer}>A negociação acontece diretamente entre os membros. O Connexio não processa pagamentos nesta fase.</Text>
     </Screen>
   );
@@ -80,6 +101,8 @@ const styles = StyleSheet.create({
   content: { gap: 18 },
   visual: { height: 210, borderRadius: 24, backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   favorite: { position: 'absolute', top: 16, right: 16, width: 44, height: 44, borderRadius: 22, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
+  previewNotice: { flexDirection: 'row', gap: 10, padding: 13, borderRadius: 14, backgroundColor: 'rgba(241,200,107,0.08)', borderWidth: 1, borderColor: 'rgba(241,200,107,0.28)' },
+  previewText: { color: colors.textMuted, fontSize: 12, lineHeight: 18, flex: 1 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between' },
   category: { color: colors.goldSoft, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.7 },
   type: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
@@ -102,5 +125,6 @@ const styles = StyleSheet.create({
   ownerName: { color: colors.text, fontSize: 16, fontWeight: '800' },
   lodge: { color: colors.textMuted, fontSize: 12 },
   verified: { color: colors.goldSoft, fontSize: 11, marginTop: 2 },
+  pendingOwner: { color: colors.warning, fontSize: 11, marginTop: 2 },
   disclaimer: { color: colors.textMuted, fontSize: 11, lineHeight: 16, textAlign: 'center' },
 });
