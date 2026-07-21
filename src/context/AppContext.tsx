@@ -7,7 +7,10 @@ type NewListing = Omit<
   'id' | 'ownerId' | 'ownerName' | 'ownerLodge' | 'ownerVerified' | 'phone' | 'createdAt'
 >;
 
-type PendingRegistration = Omit<Member, 'id' | 'status' | 'cimMasked'> & {
+type PendingRegistration = {
+  name: string;
+  email: string;
+  whatsapp: string;
   cim: string;
   password: string;
 };
@@ -39,9 +42,9 @@ export function AppProvider({ children }: PropsWithChildren) {
       name: form.name,
       email: form.email,
       whatsapp: form.whatsapp,
-      city: form.city,
-      region: form.region,
-      lodge: form.lodge,
+      city: '',
+      region: '',
+      lodge: 'Loja a informar',
       cimMasked: `•••• ${form.cim.slice(-4)}`,
       status: 'PENDING',
     });
