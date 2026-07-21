@@ -5,13 +5,14 @@ import { Platform } from 'react-native';
 export async function reportListing(listingId: string, reason: ReportReason, details?: string) {
   const { data } = await supabase.auth.getUser();
   if (!data.user) throw new Error('Entre na sua conta para enviar uma denúncia.');
-  const { error } = await supabase.from('listing_reports').upsert({
+  const { error } = await supabase.from('listing_reports').insert({
     listing_id: listingId,
     reporter_id: data.user.id,
     reason,
     details: details?.trim() || null,
     status: 'OPEN',
-  }, { onConflict: 'listing_id,reporter_id' });
+  });
+  if (error?.code === '23505') throw new Error('Você já denunciou esta oferta. A administração fará a análise.');
   if (error) throw error;
 }
 
