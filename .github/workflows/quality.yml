@@ -32,7 +32,6 @@ jobs:
         run: npx expo install --check
 
       - name: TypeScript
-        id: typescript
         shell: bash
         run: |
           set +e
@@ -54,9 +53,25 @@ jobs:
         run: npm run lint --silent
 
       - name: Export web
-        run: npx expo export --platform web --non-interactive
+        shell: bash
+        run: |
+          set +e
+          npx expo export --platform web --non-interactive > web-export.log 2>&1
+          status=$?
+          cat web-export.log
+          exit $status
+
+      - name: Upload web export diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-export-diagnostics
+          path: web-export.log
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Upload web preview
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: connexio-web
