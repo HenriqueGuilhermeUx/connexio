@@ -2,6 +2,7 @@ import { Button } from '@/components/Button';
 import { FormField } from '@/components/FormField';
 import { Screen } from '@/components/Screen';
 import { useApp } from '@/context/AppContext';
+import { friendlyError } from '@/lib/errors';
 import { supabase } from '@/lib/supabase';
 import { colors } from '@/theme/colors';
 import { router } from 'expo-router';
@@ -43,46 +44,46 @@ export default function RegisterScreen() {
     }
 
     setLoading(true);
-    const email = form.email.trim().toLowerCase();
-    const phone = form.whatsapp.replace(/\D/g, '');
-    const cim = form.cim.replace(/\D/g, '');
+    try {
+      const email = form.email.trim().toLowerCase();
+      const phone = form.whatsapp.replace(/\D/g, '');
+      const cim = form.cim.replace(/\D/g, '');
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password: form.password,
-      options: {
-        data: {
-          full_name: form.name.trim(),
-          phone,
-          cim,
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: form.password,
+        options: {
+          data: {
+            full_name: form.name.trim(),
+            phone,
+            cim,
+          },
         },
-      },
-    });
-    setLoading(false);
+      });
+      if (error) throw error;
 
-    if (error) {
-      Alert.alert('Não foi possível criar a conta', error.message);
-      return;
+      registerPending({
+        name: form.name.trim(),
+        email,
+        whatsapp: phone,
+        cim,
+      });
+
+      if (!data.session) {
+        Alert.alert(
+          'Confira seu e-mail',
+          'Sua conta foi criada. Confirme o e-mail para entrar no Connexio.',
+          [{ text: 'Entendi', onPress: () => router.replace('/login') }],
+        );
+        return;
+      }
+
+      router.replace('/pending');
+    } catch (error) {
+      Alert.alert('Não foi possível criar a conta', friendlyError(error));
+    } finally {
+      setLoading(false);
     }
-
-    registerPending({
-      name: form.name.trim(),
-      email,
-      whatsapp: phone,
-      cim,
-      password: form.password,
-    });
-
-    if (!data.session) {
-      Alert.alert(
-        'Confira seu e-mail',
-        'Sua conta foi criada. Confirme o e-mail para entrar no Connexio.',
-        [{ text: 'Entendi', onPress: () => router.replace('/login') }],
-      );
-      return;
-    }
-
-    router.replace('/pending');
   };
 
   return (
@@ -90,9 +91,7 @@ export default function RegisterScreen() {
       <View style={styles.intro}>
         <Text style={styles.eyebrow}>CONTA CONNEXIO</Text>
         <Text style={styles.title}>Comece de forma simples</Text>
-        <Text style={styles.subtitle}>
-          Depois de entrar, você poderá pesquisar e cadastrar tudo o que oferece enquanto sua validação acontece.
-        </Text>
+        <Text style={styles.subtitle}>Depois de entrar, você poderá pesquisar e cadastrar tudo o que oferece enquanto sua validação acontece.</Text>
       </View>
       <View style={styles.form}>
         <FormField label="Nome completo" value={form.name} onChangeText={set('name')} autoCapitalize="words" autoComplete="name" />
@@ -101,11 +100,9 @@ export default function RegisterScreen() {
         <FormField label="Número do CIM" value={form.cim} onChangeText={set('cim')} keyboardType="number-pad" hint="O CIM é privado e será usado somente na validação." />
         <FormField label="Senha" value={form.password} onChangeText={set('password')} secureTextEntry autoCapitalize="none" autoComplete="new-password" />
         <FormField label="Confirmar senha" value={form.confirmPassword} onChangeText={set('confirmPassword')} secureTextEntry autoCapitalize="none" autoComplete="new-password" />
-        <Button label={loading ? 'Criando conta...' : 'Criar conta'} onPress={submit} disabled={loading} />
+        <Button label="Criar conta" onPress={() => void submit()} loading={loading} />
       </View>
-      <Text style={styles.legal}>
-        Ao continuar, você declara que as informações são verdadeiras e aceita os termos de uso e privacidade.
-      </Text>
+      <Text style={styles.legal}>Ao continuar, você declara que as informações são verdadeiras e aceita os termos de uso e privacidade.</Text>
     </Screen>
   );
 }
