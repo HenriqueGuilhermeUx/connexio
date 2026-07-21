@@ -1,33 +1,40 @@
-import { demoMember, initialListings } from '@/data/mock';
+import {
+  createListing as persistListing,
+  ListingDraftInput,
+  loadCatalog,
+  loadCategories,
+  loadFavoriteIds,
+  PickedImage,
+  setFavorite,
+} from '@/lib/catalog';
+import { isCurrentUserAdmin } from '@/lib/admin';
 import { supabase } from '@/lib/supabase';
+import { CategoryRecord } from '@/types/database';
 import { Listing, Member, MemberStatus } from '@/types';
-import React, { createContext, PropsWithChildren, useContext, useEffect, useState } from 'react';
-
-type NewListing = Omit<
-  Listing,
-  'id' | 'ownerId' | 'ownerName' | 'ownerLodge' | 'ownerVerified' | 'phone' | 'createdAt'
->;
+import React, { createContext, PropsWithChildren, useCallback, useContext, useEffect, useState } from 'react';
 
 type PendingRegistration = {
   name: string;
   email: string;
   whatsapp: string;
   cim: string;
-  password: string;
 };
 
 type AppContextValue = {
   member: Member | null;
   status: MemberStatus;
   sessionLoading: boolean;
+  dataLoading: boolean;
+  isAdmin: boolean;
   listings: Listing[];
+  categories: CategoryRecord[];
   favorites: string[];
   login: (email: string, password: string) => Promise<Member>;
-  loginDemo: () => void;
   registerPending: (member: PendingRegistration) => void;
-  logout: () => void;
-  toggleFavorite: (listingId: string) => void;
-  createListing: (listing: NewListing) => Listing;
+  logout: () => Promise<void>;
+  refreshData: () => Promise<void>;
+  toggleFavorite: (listingId: string) => Promise<void>;
+  createListing: (listing: ListingDraftInput, images?: PickedImage[]) => Promise<string>;
 };
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
@@ -42,10 +49,13 @@ function mapStatus(status?: string): MemberStatus {
 export function AppProvider({ children }: PropsWithChildren) {
   const [member, setMember] = useState<Member | null>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
-  const [listings, setListings] = useState<Listing[]>(initialListings);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
 
-  const loadMember = async (userId: string, fallbackEmail = '') => {
+  const loadMember = useCallback(async (userId: string, fallbackEmail = '') => {
     const [{ data: profile, error: profileError }, { data: verification }] = await Promise.all([
       supabase
         .from('profiles')
@@ -68,39 +78,80 @@ export function AppProvider({ children }: PropsWithChildren) {
       whatsapp: profile.phone || '',
       city: profile.city || '',
       region: profile.region || '',
-      lodge: 'Loja a informar',
+      lodge: 'Loja a confirmar',
       cimMasked: verification?.cim_last4 ? `•••• ${verification.cim_last4}` : 'Em validação',
       status: mapStatus(profile.status),
     };
 
     setMember(loaded);
     return loaded;
-  };
+  }, []);
+
+  const refreshData = useCallback(async () => {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) {
+      setListings([]);
+      setCategories([]);
+      setFavorites([]);
+      setIsAdmin(false);
+      return;
+    }
+
+    setDataLoading(true);
+    try {
+      const [loadedCategories, loadedListings, loadedFavorites, admin] = await Promise.all([
+        loadCategories(),
+        loadCatalog(),
+        loadFavoriteIds(),
+        isCurrentUserAdmin(),
+      ]);
+      setCategories(loadedCategories);
+      setListings(loadedListings);
+      setFavorites(loadedFavorites);
+      setIsAdmin(admin);
+    } finally {
+      setDataLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
 
-    supabase.auth.getSession().then(async ({ data }) => {
+    const restore = async () => {
+      const { data } = await supabase.auth.getSession();
       try {
         if (active && data.session?.user) {
           await loadMember(data.session.user.id, data.session.user.email ?? '');
+          await refreshData();
         }
       } finally {
         if (active) setSessionLoading(false);
       }
-    });
+    };
+
+    void restore();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
       if (!session?.user) {
         setMember(null);
+        setListings([]);
+        setCategories([]);
+        setFavorites([]);
+        setIsAdmin(false);
         setSessionLoading(false);
         return;
       }
+
       setTimeout(() => {
-        loadMember(session.user.id, session.user.email ?? '')
-          .catch(() => undefined)
-          .finally(() => setSessionLoading(false));
+        void (async () => {
+          try {
+            await loadMember(session.user.id, session.user.email ?? '');
+            await refreshData();
+          } finally {
+            if (active) setSessionLoading(false);
+          }
+        })();
       }, 0);
     });
 
@@ -108,7 +159,7 @@ export function AppProvider({ children }: PropsWithChildren) {
       active = false;
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [loadMember, refreshData]);
 
   const login: AppContextValue['login'] = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -117,65 +168,68 @@ export function AppProvider({ children }: PropsWithChildren) {
     });
     if (error) throw error;
     if (!data.user) throw new Error('Conta não encontrada.');
-    return loadMember(data.user.id, data.user.email ?? email);
+    const loaded = await loadMember(data.user.id, data.user.email ?? email);
+    await refreshData();
+    return loaded;
   };
-
-  const loginDemo = () => setMember(demoMember);
 
   const registerPending: AppContextValue['registerPending'] = (form) => {
     setMember({
-      id: `member-${Date.now()}`,
+      id: `pending-${Date.now()}`,
       name: form.name,
       email: form.email,
       whatsapp: form.whatsapp,
       city: '',
       region: '',
-      lodge: 'Loja a informar',
+      lodge: 'Loja a confirmar',
       cimMasked: `•••• ${form.cim.slice(-4)}`,
       status: 'PENDING',
     });
   };
 
-  const logout = () => {
-    void supabase.auth.signOut();
+  const logout = async () => {
+    await supabase.auth.signOut();
     setMember(null);
+    setListings([]);
+    setCategories([]);
     setFavorites([]);
+    setIsAdmin(false);
   };
 
-  const toggleFavorite = (listingId: string) => {
+  const toggleFavorite = async (listingId: string) => {
+    const willFavorite = !favorites.includes(listingId);
     setFavorites((current) =>
-      current.includes(listingId)
-        ? current.filter((id) => id !== listingId)
-        : [...current, listingId],
+      willFavorite ? [...current, listingId] : current.filter((id) => id !== listingId),
     );
+    try {
+      await setFavorite(listingId, willFavorite);
+    } catch (error) {
+      setFavorites((current) =>
+        willFavorite ? current.filter((id) => id !== listingId) : [...current, listingId],
+      );
+      throw error;
+    }
   };
 
-  const createListing: AppContextValue['createListing'] = (form) => {
-    const owner = member ?? demoMember;
-    const listing: Listing = {
-      ...form,
-      id: `listing-${Date.now()}`,
-      ownerId: owner.id,
-      ownerName: owner.name,
-      ownerLodge: owner.lodge,
-      ownerVerified: owner.status === 'APPROVED',
-      phone: owner.whatsapp,
-      createdAt: new Date().toISOString(),
-    };
-    setListings((current) => [listing, ...current]);
-    return listing;
+  const createListing: AppContextValue['createListing'] = async (form, images = []) => {
+    const id = await persistListing(form, images);
+    await refreshData();
+    return id;
   };
 
   const value: AppContextValue = {
     member,
     status: member?.status ?? 'GUEST',
     sessionLoading,
+    dataLoading,
+    isAdmin,
     listings,
+    categories,
     favorites,
     login,
-    loginDemo,
     registerPending,
     logout,
+    refreshData,
     toggleFavorite,
     createListing,
   };
