@@ -10,6 +10,18 @@ function priceLabel(listing: Listing) {
   return listing.priceType === 'FROM' ? `A partir de ${value}` : value;
 }
 
+function typeLabel(listing: Listing) {
+  if (listing.type === 'BUSINESS') return 'Loja / negócio';
+  if (listing.type === 'SERVICE') return 'Serviço';
+  return 'Produto';
+}
+
+function typeIcon(listing: Listing): keyof typeof MaterialCommunityIcons.glyphMap {
+  if (listing.type === 'BUSINESS') return 'storefront-outline';
+  if (listing.type === 'SERVICE') return 'briefcase-outline';
+  return 'shopping-outline';
+}
+
 type Props = {
   listing: Listing;
   favorite: boolean;
@@ -23,11 +35,7 @@ export function ListingCard({ listing, favorite, onToggleFavorite }: Props) {
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.visual}>
-        <MaterialCommunityIcons
-          name={listing.type === 'SERVICE' ? 'briefcase-outline' : 'shopping-outline'}
-          size={34}
-          color={colors.gold}
-        />
+        <MaterialCommunityIcons name={typeIcon(listing)} size={34} color={colors.gold} />
         {listing.featured ? <Text style={styles.featured}>Destaque</Text> : null}
         <Pressable
           accessibilityLabel={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
@@ -45,7 +53,7 @@ export function ListingCard({ listing, favorite, onToggleFavorite }: Props) {
       <View style={styles.body}>
         <View style={styles.metaRow}>
           <Text style={styles.category}>{listing.category}</Text>
-          <Text style={styles.type}>{listing.type === 'SERVICE' ? 'Serviço' : 'Produto'}</Text>
+          <Text style={styles.type}>{typeLabel(listing)}</Text>
         </View>
         <Text style={styles.title} numberOfLines={2}>{listing.title}</Text>
         <View style={styles.locationRow}>
@@ -77,7 +85,7 @@ const styles = StyleSheet.create({
   favorite: { position: 'absolute', top: 14, right: 14, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(8,21,38,0.74)', alignItems: 'center', justifyContent: 'center' },
   body: { padding: 16, gap: 9 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  category: { color: colors.goldSoft, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
+  category: { color: colors.goldSoft, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6, flex: 1 },
   type: { color: colors.textMuted, fontSize: 12 },
   title: { color: colors.text, fontSize: 19, lineHeight: 24, fontWeight: '800' },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
