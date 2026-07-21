@@ -9,29 +9,23 @@ As migrations abaixo devem ser executadas uma única vez, em ordem:
 
 Quando o SQL Editor mostra **No rows detected** sem erro em vermelho, os comandos estruturais foram concluídos normalmente.
 
-## 2. Executar a migration do catálogo real
+## 2. Executar as migrations finais desta entrega
 
-Execute agora:
+Execute, nesta ordem:
 
-`supabase/migrations/20260721210000_catalog_storage_admin.sql`
+1. `supabase/migrations/20260721210000_catalog_storage_admin.sql`;
+2. `supabase/migrations/20260721230000_store_compliance.sql`.
 
-Passos:
+Para cada arquivo:
 
-1. No GitHub, abra o repositório `connexio`.
-2. Selecione a branch `agent/supabase-foundation`.
-3. Abra `supabase` → `migrations`.
-4. Abra `20260721210000_catalog_storage_admin.sql`.
-5. Clique em **Raw** e copie tudo.
-6. No Supabase, abra **SQL Editor** → **New query**.
-7. Cole e clique em **Run** uma vez.
+1. selecione a branch `agent/supabase-foundation` no GitHub;
+2. abra `supabase` → `migrations`;
+3. abra o arquivo;
+4. clique em **Raw** e copie tudo;
+5. no Supabase, abra **SQL Editor** → **New query**;
+6. cole e clique em **Run** uma vez.
 
-Ela cria:
-
-- tabela e políticas de imagens das ofertas;
-- bucket privado `listing-images`;
-- leitura segura das imagens por status do membro;
-- filas reais de membros e ofertas para o painel administrativo;
-- permissões para upload, ordenação e exclusão de imagens.
+A primeira cria o catálogo persistente, imagens privadas e filas administrativas. A segunda adiciona aceite versionado, denúncias, recuperação operacional, exclusão real da conta e moderação de denúncias.
 
 ## 3. Permitir entrada imediata no piloto
 
@@ -42,9 +36,18 @@ Ela cria:
 5. Desative temporariamente **Confirm email**.
 6. Salve.
 
-A confirmação de e-mail poderá voltar antes da abertura pública.
+## 4. Configurar URLs de autenticação
 
-## 4. Criar e liberar o administrador fundador
+Em **Authentication** → **URL Configuration**:
+
+- mantenha a URL local ou do piloto como `Site URL`;
+- adicione em `Redirect URLs`:
+  - `connexio://reset-password`;
+  - a futura URL web do piloto seguida de `/reset-password`.
+
+Depois que o EAS Hosting gerar o endereço, volte a esta tela e cadastre a URL completa de recuperação.
+
+## 5. Criar e liberar o administrador fundador
 
 1. Abra o Connexio na branch `agent/supabase-foundation`.
 2. Crie a conta usando `henriquecampos66@gmail.com`.
@@ -53,41 +56,38 @@ A confirmação de e-mail poderá voltar antes da abertura pública.
 5. No Supabase, abra **SQL Editor** → **New query**.
 6. Cole e clique em **Run** uma vez.
 
-O resultado esperado é uma linha com:
+Resultado esperado:
 
 - `status = APPROVED`;
 - `is_admin = true`.
 
-O script não cria usuário nem senha. Ele apenas promove a conta já criada e vinculada ao e-mail correto.
-
-## 5. Teste operacional
+## 6. Teste operacional
 
 Depois do bootstrap:
 
-1. saia e entre novamente no Connexio;
-2. abra **Perfil**;
-3. confirme o selo `MEMBRO VERIFICADO`;
-4. confirme o botão **Abrir painel administrativo**;
-5. publique uma oferta completa com foto;
-6. abra o painel e publique a oferta;
-7. crie uma segunda conta para testar a fila de validação e o catálogo limitado.
+1. saia e entre novamente;
+2. confirme o selo `MEMBRO VERIFICADO` no Perfil;
+3. confirme o botão do painel administrativo;
+4. publique uma oferta completa com foto;
+5. aprove e publique a oferta no painel;
+6. crie uma segunda conta;
+7. confirme a visão limitada e o bloqueio dos contatos;
+8. aprove a segunda conta;
+9. denuncie uma oferta e trate a denúncia no painel;
+10. teste recuperação de senha e exclusão com uma conta descartável.
 
-## 6. Aviso por e-mail de novo cadastro — pode ser feito depois
+## 7. Aviso por e-mail — adiado
 
-A função está em:
+A função preparada está em `supabase/functions/notify-new-member/index.ts`.
 
-`supabase/functions/notify-new-member/index.ts`
-
-Secrets necessários:
+Secrets necessários futuramente:
 
 - `RESEND_API_KEY`;
 - `ADMIN_NOTIFICATION_EMAIL=henriquecampos66@gmail.com`;
 - `MAIL_FROM`;
 - `CONNEXIO_WEBHOOK_SECRET`.
 
-Depois de publicar a função, crie um Database Webhook na tabela `admin_notification_outbox`, evento `INSERT`, enviando o header `x-webhook-secret`.
-
-## 7. Regra de chaves
+## 8. Regra de chaves
 
 O aplicativo usa somente:
 
