@@ -23,13 +23,13 @@ jobs:
           cache-dependency-path: package.json
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm install --silent --no-audit --no-fund
 
       - name: Check Expo dependencies
         run: npx expo install --check
 
       - name: TypeScript
-        run: npm run typecheck
+        run: npm run typecheck --silent
 
       - name: ESLint
-        run: npm run lint
+        run: npm run lint --silent
