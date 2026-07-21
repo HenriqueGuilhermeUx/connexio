@@ -10,7 +10,10 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://umgryjsxpvycrrcjtglm.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_0rsbKWDBShD_-CMwTVadTw_tJy9bWNp
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,3 +52,13 @@ jobs:
 
       - name: ESLint
         run: npm run lint --silent
+
+      - name: Export web
+        run: npx expo export --platform web --non-interactive
+
+      - name: Upload web preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: connexio-web
+          path: dist
+          retention-days: 3
