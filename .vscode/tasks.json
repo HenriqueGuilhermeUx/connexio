@@ -20,7 +20,7 @@
     {
       "label": "Connexio: validar projeto",
       "type": "shell",
-      "command": "npm run typecheck && npm run lint",
+      "command": "npm run typecheck && npm run lint && CI=1 npx expo export --platform web",
       "problemMatcher": [],
       "presentation": { "reveal": "always", "panel": "dedicated", "focus": false }
     },
@@ -41,7 +41,14 @@
     {
       "label": "Expo: publicar piloto web",
       "type": "shell",
-      "command": "npx expo export --platform web && npx eas-cli@latest deploy",
+      "command": "npx eas-cli@latest env:pull --environment preview --path .env.local && CI=1 npx expo export --platform web && npx eas-cli@latest deploy --environment preview",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true }
+    },
+    {
+      "label": "Expo: publicar web em produção",
+      "type": "shell",
+      "command": "npx eas-cli@latest env:pull --environment production --path .env.local && CI=1 npx expo export --platform web && npx eas-cli@latest deploy --environment production --prod",
       "problemMatcher": [],
       "presentation": { "reveal": "always", "panel": "dedicated", "focus": true }
     },
