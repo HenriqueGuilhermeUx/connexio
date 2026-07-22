@@ -47,3 +47,9 @@ export type Member = {
   cimMasked: string;
   status: MemberStatus;
 };
+
+export type BlockedMember = {
+  id: string;
+  name: string;
+  createdAt: string;
+};
