@@ -12,7 +12,7 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 export default function ProfileScreen() {
-  const { member, listings, isAdmin, logout } = useApp();
+  const { member, listings, isAdmin, blockedMembers, logout } = useApp();
 
   if (!member) return null;
 
@@ -40,6 +40,11 @@ export default function ProfileScreen() {
 
       <View style={styles.section}>
         <SectionHeader title="Segurança e privacidade" subtitle="Controle sua senha, seus dados e sua conta." />
+        <Button
+          label={`Anunciantes bloqueados (${blockedMembers.length})`}
+          variant="secondary"
+          onPress={() => router.push('/blocked-members')}
+        />
         <Button label="Recuperar ou trocar senha" variant="secondary" onPress={() => router.push('/forgot-password')} />
         <Button label="Política de Privacidade" variant="secondary" onPress={() => router.push('/privacy')} />
         <Button label="Termos de Uso" variant="secondary" onPress={() => router.push('/terms')} />
