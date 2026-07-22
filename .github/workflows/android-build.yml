@@ -1,0 +1,80 @@
+name: Build Connexio Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: Arquivo Android
+        required: true
+        default: apk
+        type: choice
+        options:
+          - apk
+          - play-store
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Gerar Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Verificar token Expo
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "Crie o secret EXPO_TOKEN em Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+      - name: Baixar código do Connexio
+        uses: actions/checkout@v5
+        with:
+          ref: agent/supabase-foundation
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Preparar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Preparar Expo e EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Definir tipo de arquivo
+        shell: bash
+        run: |
+          if [ "${{ inputs.build_type }}" = "play-store" ]; then
+            echo "EAS_PROFILE=production" >> "$GITHUB_ENV"
+            echo "OUTPUT_FILE=connexio-play-store.aab" >> "$GITHUB_ENV"
+            echo "ARTIFACT_NAME=connexio-play-store" >> "$GITHUB_ENV"
+          else
+            echo "EAS_PROFILE=preview" >> "$GITHUB_ENV"
+            echo "OUTPUT_FILE=connexio-teste.apk" >> "$GITHUB_ENV"
+            echo "ARTIFACT_NAME=connexio-apk-teste" >> "$GITHUB_ENV"
+          fi
+
+      - name: Gerar arquivo Android
+        run: eas build --platform android --profile "$EAS_PROFILE" --local --non-interactive --output "./$OUTPUT_FILE"
+
+      - name: Disponibilizar para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_FILE }}
+          if-no-files-found: error
+          retention-days: 14
