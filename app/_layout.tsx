@@ -25,6 +25,7 @@ export default function RootLayout() {
         <Stack.Screen name="privacy" options={{ title: 'Privacidade' }} />
         <Stack.Screen name="terms" options={{ title: 'Termos de Uso' }} />
         <Stack.Screen name="delete-account" options={{ title: 'Excluir conta' }} />
+        <Stack.Screen name="blocked-members" options={{ title: 'Anunciantes bloqueados' }} />
         <Stack.Screen name="pending" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="listing/[id]" options={{ title: 'Oferta' }} />
