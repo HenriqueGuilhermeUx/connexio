@@ -5,7 +5,7 @@ import {
   CategoryRecord,
   ListingQueryRecord,
 } from '@/types/database';
-import { Listing, ListingType, PriceType } from '@/types';
+import { BlockedMember, Listing, ListingType, PriceType } from '@/types';
 
 export type ListingDraftInput = {
   type: ListingType;
@@ -189,6 +189,48 @@ export async function setFavorite(listingId: string, favorite: boolean) {
     .delete()
     .eq('user_id', authData.user.id)
     .eq('listing_id', listingId);
+  if (error) throw error;
+}
+
+export async function loadBlockedMembers(): Promise<BlockedMember[]> {
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData.user) return [];
+
+  const { data: blocks, error } = await supabase
+    .from('user_blocks')
+    .select('blocked_id,created_at')
+    .eq('blocker_id', authData.user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') return [];
+    throw error;
+  }
+
+  const ids = (blocks ?? []).map((block) => block.blocked_id as string);
+  if (ids.length === 0) return [];
+
+  const { data: profiles, error: profileError } = await supabase
+    .from('profiles')
+    .select('id,full_name')
+    .in('id', ids);
+  if (profileError) throw profileError;
+
+  const names = new Map((profiles ?? []).map((profile) => [profile.id as string, profile.full_name as string]));
+  return (blocks ?? []).map((block) => ({
+    id: block.blocked_id as string,
+    name: names.get(block.blocked_id as string) || 'Membro Connexio',
+    createdAt: block.created_at as string,
+  }));
+}
+
+export async function blockMember(userId: string) {
+  const { error } = await supabase.rpc('block_member', { target_user_id: userId });
+  if (error) throw error;
+}
+
+export async function unblockMember(userId: string) {
+  const { error } = await supabase.rpc('unblock_member', { target_user_id: userId });
   if (error) throw error;
 }
 
