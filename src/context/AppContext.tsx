@@ -114,8 +114,9 @@ export function AppProvider({ children }: PropsWithChildren) {
         loadBlockedMembers(),
         isCurrentUserAdmin(),
       ]);
+      const blockedIds = new Set(loadedBlocks.map((blocked) => blocked.id));
       setCategories(loadedCategories);
-      setListings(loadedListings);
+      setListings(loadedListings.filter((listing) => listing.ownerId === data.user?.id || !blockedIds.has(listing.ownerId)));
       setFavorites(loadedFavorites);
       setBlockedMembers(loadedBlocks);
       setIsAdmin(admin);
