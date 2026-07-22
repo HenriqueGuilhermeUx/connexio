@@ -1,16 +1,19 @@
 import {
+  blockMember as persistBlockMember,
   createListing as persistListing,
   ListingDraftInput,
+  loadBlockedMembers,
   loadCatalog,
   loadCategories,
   loadFavoriteIds,
   PickedImage,
   setFavorite,
+  unblockMember as persistUnblockMember,
 } from '@/lib/catalog';
 import { isCurrentUserAdmin } from '@/lib/admin';
 import { supabase } from '@/lib/supabase';
 import { CategoryRecord } from '@/types/database';
-import { Listing, Member, MemberStatus } from '@/types';
+import { BlockedMember, Listing, Member, MemberStatus } from '@/types';
 import React, { createContext, PropsWithChildren, useCallback, useContext, useEffect, useState } from 'react';
 
 type PendingRegistration = {
@@ -29,11 +32,14 @@ type AppContextValue = {
   listings: Listing[];
   categories: CategoryRecord[];
   favorites: string[];
+  blockedMembers: BlockedMember[];
   login: (email: string, password: string) => Promise<Member>;
   registerPending: (member: PendingRegistration) => void;
   logout: () => Promise<void>;
   refreshData: () => Promise<void>;
   toggleFavorite: (listingId: string) => Promise<void>;
+  blockMember: (userId: string) => Promise<void>;
+  unblockMember: (userId: string) => Promise<void>;
   createListing: (listing: ListingDraftInput, images?: PickedImage[]) => Promise<string>;
 };
 
@@ -54,6 +60,7 @@ export function AppProvider({ children }: PropsWithChildren) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [blockedMembers, setBlockedMembers] = useState<BlockedMember[]>([]);
 
   const loadMember = useCallback(async (userId: string, fallbackEmail = '') => {
     const [{ data: profile, error: profileError }, { data: verification }] = await Promise.all([
@@ -93,21 +100,24 @@ export function AppProvider({ children }: PropsWithChildren) {
       setListings([]);
       setCategories([]);
       setFavorites([]);
+      setBlockedMembers([]);
       setIsAdmin(false);
       return;
     }
 
     setDataLoading(true);
     try {
-      const [loadedCategories, loadedListings, loadedFavorites, admin] = await Promise.all([
+      const [loadedCategories, loadedListings, loadedFavorites, loadedBlocks, admin] = await Promise.all([
         loadCategories(),
         loadCatalog(),
         loadFavoriteIds(),
+        loadBlockedMembers(),
         isCurrentUserAdmin(),
       ]);
       setCategories(loadedCategories);
       setListings(loadedListings);
       setFavorites(loadedFavorites);
+      setBlockedMembers(loadedBlocks);
       setIsAdmin(admin);
     } finally {
       setDataLoading(false);
@@ -138,6 +148,7 @@ export function AppProvider({ children }: PropsWithChildren) {
         setListings([]);
         setCategories([]);
         setFavorites([]);
+        setBlockedMembers([]);
         setIsAdmin(false);
         setSessionLoading(false);
         return;
@@ -193,6 +204,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     setListings([]);
     setCategories([]);
     setFavorites([]);
+    setBlockedMembers([]);
     setIsAdmin(false);
   };
 
@@ -211,6 +223,16 @@ export function AppProvider({ children }: PropsWithChildren) {
     }
   };
 
+  const blockMember = async (userId: string) => {
+    await persistBlockMember(userId);
+    await refreshData();
+  };
+
+  const unblockMember = async (userId: string) => {
+    await persistUnblockMember(userId);
+    await refreshData();
+  };
+
   const createListing: AppContextValue['createListing'] = async (form, images = []) => {
     const id = await persistListing(form, images);
     await refreshData();
@@ -226,11 +248,14 @@ export function AppProvider({ children }: PropsWithChildren) {
     listings,
     categories,
     favorites,
+    blockedMembers,
     login,
     registerPending,
     logout,
     refreshData,
     toggleFavorite,
+    blockMember,
+    unblockMember,
     createListing,
   };
 
