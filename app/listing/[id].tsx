@@ -17,7 +17,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { member, listings, favorites, toggleFavorite } = useApp();
+  const { member, listings, favorites, toggleFavorite, blockMember } = useApp();
   const listing = listings.find((item) => item.id === id);
 
   if (!listing) {
@@ -36,6 +36,31 @@ export default function ListingDetailScreen() {
     } catch (error) {
       Alert.alert('Não foi possível atualizar', friendlyError(error));
     }
+  };
+
+  const blockAdvertiser = () => {
+    Alert.alert(
+      'Bloquear e ocultar anunciante?',
+      `As ofertas de ${listing.ownerName} deixarão de aparecer para você. O bloqueio poderá ser desfeito no seu perfil.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Bloquear e ocultar',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              try {
+                await blockMember(listing.ownerId);
+                router.back();
+                Alert.alert('Anunciante bloqueado', 'As ofertas deste anunciante foram ocultadas.');
+              } catch (error) {
+                Alert.alert('Não foi possível bloquear', friendlyError(error));
+              }
+            })();
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -84,6 +109,7 @@ export default function ListingDetailScreen() {
       {contactAllowed ? <WebsiteButton url={listing.website} /> : null}
       {!own ? <ContactButton listing={listing} allowed={contactAllowed} /> : null}
       {!own && published ? <Button label="Denunciar esta oferta" variant="ghost" onPress={() => router.push({ pathname: '/report/[id]', params: { id: listing.id } })} /> : null}
+      {!own && published ? <Button label="Bloquear e ocultar anunciante" variant="danger" onPress={blockAdvertiser} /> : null}
 
       <Text style={styles.disclaimer}>A negociação acontece diretamente entre os membros. O Connexio não processa pagamentos nesta fase.</Text>
     </Screen>
