@@ -2,6 +2,7 @@
   "expo": {
     "name": "Connexio",
     "slug": "connexio",
+    "owner": "henrriquenexa",
     "version": "0.3.0",
     "orientation": "portrait",
     "scheme": "connexio",
@@ -32,6 +33,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "cdcb129b-043c-4823-be6f-4e7dc0b7ddeb"
+      }
     }
   }
 }
