@@ -3,15 +3,15 @@ begin;
 create extension if not exists pg_net with schema extensions;
 create extension if not exists supabase_vault with schema vault;
 
--- Troque o valor abaixo pela MESMA senha usada no Secret
--- CONNEXIO_WEBHOOK_SECRET da Edge Function antes de executar.
+-- Cole abaixo a MESMA senha usada no Secret CONNEXIO_WEBHOOK_SECRET.
+-- Edite somente a linha secret_value.
 do $$
 declare
   secret_id uuid;
-  secret_value text := 'SUBSTITUA_PELA_MESMA_SENHA_DO_WEBHOOK';
+  secret_value text := '';
 begin
-  if secret_value = 'SUBSTITUA_PELA_MESMA_SENHA_DO_WEBHOOK' then
-    raise exception 'Substitua a senha do webhook antes de executar.';
+  if secret_value is null or char_length(btrim(secret_value)) < 16 then
+    raise exception 'Informe em secret_value uma senha de webhook com pelo menos 16 caracteres.';
   end if;
 
   select id into secret_id
