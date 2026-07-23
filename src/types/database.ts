@@ -10,6 +10,8 @@ export type DbListingStatus =
 export type DbListingType = 'BUSINESS' | 'SERVICE' | 'PRODUCT';
 export type DbPriceType = 'FIXED' | 'FROM' | 'ON_REQUEST';
 export type DbReportStatus = 'OPEN' | 'REVIEWING' | 'RESOLVED' | 'DISMISSED';
+export type DbEventStatus = 'PENDING_REVIEW' | 'PUBLISHED' | 'REJECTED' | 'CANCELLED';
+export type DbEventScope = 'CITY' | 'REGION' | 'STATE' | 'NETWORK';
 export type ReportReason = 'INAPPROPRIATE' | 'MISLEADING' | 'FRAUD' | 'DUPLICATE' | 'OTHER';
 
 export type CategoryRecord = {
@@ -26,6 +28,10 @@ export type ProfileRecord = {
   phone: string;
   city: string | null;
   region: string | null;
+  lodge_name: string | null;
+  lodge_number: string | null;
+  obedience: string | null;
+  event_email_opt_in: boolean;
   avatar_url: string | null;
   status: DbMemberStatus;
   approved_at: string | null;
@@ -127,4 +133,29 @@ export type AdminReportQueueRecord = {
   details: string | null;
   status: DbReportStatus;
   created_at: string;
+};
+
+export type EventRecord = {
+  id: string;
+  organizer_id: string;
+  title: string;
+  description: string;
+  starts_at: string;
+  ends_at: string | null;
+  venue: string;
+  address: string | null;
+  city: string;
+  region: string;
+  lodge_name: string;
+  contact_whatsapp: string;
+  ticket_price: number | null;
+  ticket_url: string | null;
+  audience_scope: DbEventScope;
+  image_path: string | null;
+  status: DbEventStatus;
+  featured: boolean;
+  published_at: string | null;
+  email_sent_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
