@@ -1,0 +1,5 @@
+[functions.notify-new-member]
+verify_jwt = false
+
+[functions.notify-region-event]
+verify_jwt = false

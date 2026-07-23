@@ -1,104 +1,103 @@
-import { BrandMark } from '@/components/BrandMark';
-import { EmptyState } from '@/components/EmptyState';
-import { ListingCard } from '@/components/ListingCard';
+import { Button } from '@/components/Button';
+import { CatalogHeader } from '@/components/CatalogHeader';
+import { CatalogIntro } from '@/components/CatalogIntro';
+import { CategoryPills } from '@/components/CategoryPills';
+import { EmptyCatalog } from '@/components/EmptyCatalog';
+import { EventCard } from '@/components/EventCard';
+import { LoadingState } from '@/components/LoadingState';
+import { OfferGrid } from '@/components/OfferGrid';
 import { Screen } from '@/components/Screen';
+import { SearchField } from '@/components/SearchField';
+import { SectionHeader } from '@/components/SectionHeader';
+import { VerificationNotice } from '@/components/VerificationNotice';
 import { useApp } from '@/context/AppContext';
-import { categories } from '@/data/mock';
-import { colors } from '@/theme/colors';
-import { Feather } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { eventMatchesMember, loadEvents } from '@/lib/events';
+import { friendlyError } from '@/lib/errors';
+import { matchesListing } from '@/lib/search';
+import { ConnexioEvent } from '@/types';
+import { router } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, StyleSheet, View } from 'react-native';
 
 export default function HomeScreen() {
-  const { member, listings, favorites, toggleFavorite } = useApp();
+  const { member, status, listings, categories, favorites, dataLoading, toggleFavorite } = useApp();
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('Todos');
+  const [category, setCategory] = useState('all');
+  const [events, setEvents] = useState<ConnexioEvent[]>([]);
 
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase('pt-BR');
-    return listings.filter((listing) => {
-      const matchesCategory = category === 'Todos' || listing.category === category;
-      const haystack = `${listing.title} ${listing.description} ${listing.category} ${listing.city} ${listing.region}`.toLocaleLowerCase('pt-BR');
-      return matchesCategory && (!normalized || haystack.includes(normalized));
-    });
-  }, [category, listings, query]);
+  useEffect(() => {
+    void loadEvents()
+      .then(setEvents)
+      .catch(() => setEvents([]));
+  }, []);
+
+  const publicCatalog = useMemo(
+    () => listings.filter((listing) => listing.status === 'PUBLISHED'),
+    [listings],
+  );
+
+  const filtered = useMemo(() => publicCatalog.filter((listing) => {
+    const matchesCategory = category === 'all' || listing.categorySlug === category;
+    return matchesCategory && matchesListing(listing, query);
+  }), [category, publicCatalog, query]);
+
+  const regionalEvents = useMemo(
+    () => events
+      .filter((event) => event.status === 'PUBLISHED' && eventMatchesMember(event, member?.city, member?.region))
+      .slice(0, 3),
+    [events, member?.city, member?.region],
+  );
+
+  const favorite = async (listingId: string) => {
+    try {
+      await toggleFavorite(listingId);
+    } catch (error) {
+      Alert.alert('Não foi possível salvar', friendlyError(error));
+    }
+  };
 
   return (
     <Screen contentStyle={styles.content}>
-      <View style={styles.header}>
-        <BrandMark compact />
-        <View style={styles.location}>
-          <Feather name="map-pin" size={13} color={colors.gold} />
-          <Text style={styles.locationText}>{member?.city ?? 'São Paulo'}</Text>
-        </View>
-      </View>
+      <CatalogHeader />
+      <CatalogIntro firstName={member?.name.split(' ')[0]} />
+      <VerificationNotice status={status} />
 
-      <View style={styles.intro}>
-        <Text style={styles.greeting}>Olá, {member?.name.split(' ')[0] ?? 'membro'}.</Text>
-        <Text style={styles.title}>O que você procura hoje?</Text>
-      </View>
-
-      <View style={styles.searchBox}>
-        <Feather name="search" size={20} color={colors.textMuted} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Serviço, produto ou cidade"
-          placeholderTextColor={colors.textMuted}
-          style={styles.searchInput}
-        />
-        {query ? <Pressable onPress={() => setQuery('')}><Feather name="x" size={19} color={colors.textMuted} /></Pressable> : null}
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>
-        {categories.map((item) => {
-          const selected = category === item;
-          return (
-            <Pressable key={item} onPress={() => setCategory(item)} style={[styles.categoryPill, selected && styles.categorySelected]}>
-              <Text style={[styles.categoryText, selected && styles.categoryTextSelected]}>{item}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      <View style={styles.sectionHeader}>
-        <View>
-          <Text style={styles.sectionTitle}>{category === 'Todos' ? 'Oportunidades da rede' : category}</Text>
-          <Text style={styles.sectionSubtitle}>{filtered.length} {filtered.length === 1 ? 'resultado' : 'resultados'}</Text>
-        </View>
-      </View>
-
-      <View style={styles.list}>
-        {filtered.length ? filtered.map((listing) => (
-          <ListingCard
-            key={listing.id}
-            listing={listing}
-            favorite={favorites.includes(listing.id)}
-            onToggleFavorite={() => toggleFavorite(listing.id)}
+      {regionalEvents.length ? (
+        <View style={styles.eventsSection}>
+          <SectionHeader
+            title="Eventos na sua região"
+            subtitle="Agenda aprovada para membros do Connexio"
           />
-        )) : <EmptyState title="Nenhuma oferta encontrada" description="Tente outra categoria ou termo de busca. Esta busca também será valiosa para mapear demandas sem oferta." />}
-      </View>
+          <View style={styles.eventList}>
+            {regionalEvents.map((event) => <EventCard key={event.id} event={event} compact />)}
+          </View>
+          <Button label="Ver agenda completa" variant="secondary" onPress={() => router.push('/events')} />
+        </View>
+      ) : (
+        <Button label="Abrir agenda de eventos" variant="secondary" onPress={() => router.push('/events')} />
+      )}
+
+      <SearchField value={query} onChangeText={setQuery} placeholder="Produto, serviço, profissional ou cidade" />
+      <CategoryPills categories={categories} selected={category} onSelect={setCategory} />
+
+      <SectionHeader
+        title={category === 'all' ? 'Oportunidades da rede' : categories.find((item) => item.slug === category)?.name || 'Resultados'}
+        subtitle={`${filtered.length} ${filtered.length === 1 ? 'resultado' : 'resultados'}`}
+      />
+
+      {dataLoading && !listings.length ? (
+        <LoadingState label="Carregando oportunidades..." />
+      ) : filtered.length ? (
+        <OfferGrid listings={filtered} favorites={favorites} onToggleFavorite={(id) => void favorite(id)} />
+      ) : (
+        <EmptyCatalog searching={Boolean(query || category !== 'all')} />
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   content: { paddingTop: 14, gap: 22 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  location: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999 },
-  locationText: { color: colors.cream, fontSize: 12, fontWeight: '700' },
-  intro: { gap: 4 },
-  greeting: { color: colors.textMuted, fontSize: 14 },
-  title: { color: colors.cream, fontSize: 29, lineHeight: 35, fontWeight: '800' },
-  searchBox: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16 },
-  searchInput: { flex: 1, color: colors.text, fontSize: 15 },
-  categories: { gap: 9, paddingRight: 20 },
-  categoryPill: { paddingHorizontal: 15, paddingVertical: 10, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  categorySelected: { backgroundColor: colors.gold, borderColor: colors.gold },
-  categoryText: { color: colors.textMuted, fontSize: 13, fontWeight: '700' },
-  categoryTextSelected: { color: colors.background },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  sectionTitle: { color: colors.text, fontSize: 20, fontWeight: '800' },
-  sectionSubtitle: { color: colors.textMuted, fontSize: 12, marginTop: 3 },
-  list: { gap: 16 },
+  eventsSection: { gap: 14 },
+  eventList: { gap: 12 },
 });

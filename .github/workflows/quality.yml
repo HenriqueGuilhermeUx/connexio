@@ -1,0 +1,80 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - agent/**
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://umgryjsxpvycrrcjtglm.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_0rsbKWDBShD_-CMwTVadTw_tJy9bWNp
+      CI: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
+
+      - name: Install dependencies
+        run: npm install --silent --no-audit --no-fund
+
+      - name: Check Expo dependencies
+        run: npx expo install --check
+
+      - name: TypeScript
+        shell: bash
+        run: |
+          set +e
+          npm run typecheck --silent > typecheck.log 2>&1
+          status=$?
+          cat typecheck.log
+          exit $status
+
+      - name: Upload TypeScript diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: typecheck-diagnostics
+          path: typecheck.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: ESLint
+        run: npm run lint --silent
+
+      - name: Export web
+        shell: bash
+        run: |
+          set +e
+          npx expo export --platform web > web-export.log 2>&1
+          status=$?
+          cat web-export.log
+          exit $status
+
+      - name: Upload web export diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-export-diagnostics
+          path: web-export.log
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Upload web preview
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connexio-web
+          path: dist
+          retention-days: 3
