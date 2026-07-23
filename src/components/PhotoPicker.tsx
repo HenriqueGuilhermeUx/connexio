@@ -10,31 +10,43 @@ export type SelectedPhoto = {
   fileName?: string | null;
 };
 
-export function PhotoPicker({ photos, onChange }: { photos: SelectedPhoto[]; onChange: (photos: SelectedPhoto[]) => void }) {
+export function PhotoPicker({
+  photos,
+  onChange,
+  maxPhotos = 5,
+}: {
+  photos: SelectedPhoto[];
+  onChange: (photos: SelectedPhoto[]) => void;
+  maxPhotos?: number;
+}) {
   const pick = async () => {
+    const remaining = Math.max(1, maxPhotos - photos.length);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      selectionLimit: Math.max(1, 5 - photos.length),
+      allowsMultipleSelection: maxPhotos > 1,
+      selectionLimit: remaining,
       quality: 0.85,
     });
     if (result.canceled) return;
     const selected = result.assets.map((asset) => ({ uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName }));
-    onChange([...photos, ...selected].slice(0, 5));
+    onChange([...photos, ...selected].slice(0, maxPhotos));
   };
 
   const remove = (uri: string) => onChange(photos.filter((photo) => photo.uri !== uri));
+  const isSingle = maxPhotos === 1;
 
   return (
     <View style={styles.container}>
       <Pressable
         style={styles.picker}
-        onPress={() => photos.length >= 5 ? Alert.alert('Limite de fotos', 'Você pode adicionar até 5 imagens por oferta.') : void pick()}
+        onPress={() => photos.length >= maxPhotos
+          ? Alert.alert(isSingle ? 'Imagem já selecionada' : 'Limite de fotos', isSingle ? 'Remova a imagem atual para escolher outra.' : `Você pode adicionar até ${maxPhotos} imagens.`)
+          : void pick()}
       >
         <View style={styles.icon}><Feather name="camera" size={23} color={colors.gold} /></View>
         <View style={styles.copy}>
-          <Text style={styles.title}>{photos.length ? 'Adicionar mais fotos' : 'Adicionar fotos'}</Text>
-          <Text style={styles.subtitle}>{photos.length}/5 imagens selecionadas</Text>
+          <Text style={styles.title}>{photos.length ? (isSingle ? 'Trocar imagem de capa' : 'Adicionar mais fotos') : (isSingle ? 'Adicionar imagem de capa' : 'Adicionar fotos')}</Text>
+          <Text style={styles.subtitle}>{photos.length}/{maxPhotos} {isSingle ? 'imagem selecionada' : 'imagens selecionadas'}</Text>
         </View>
         <Feather name="plus" size={20} color={colors.textMuted} />
       </Pressable>
