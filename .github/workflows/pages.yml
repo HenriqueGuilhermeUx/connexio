@@ -1,9 +1,6 @@
 name: Publish Connexio Preview
 
 on:
-  push:
-    branches:
-      - agent/supabase-foundation
   workflow_dispatch:
 
 permissions:
@@ -22,8 +19,10 @@ jobs:
     env:
       CI: 1
     steps:
-      - name: Checkout
+      - name: Checkout preview branch
         uses: actions/checkout@v4
+        with:
+          ref: agent/supabase-foundation
 
       - name: Setup Node
         uses: actions/setup-node@v4
