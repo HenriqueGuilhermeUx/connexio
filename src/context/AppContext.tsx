@@ -21,6 +21,23 @@ type PendingRegistration = {
   email: string;
   whatsapp: string;
   cim: string;
+  city?: string;
+  region?: string;
+  lodge?: string;
+  lodgeNumber?: string;
+  obedience?: string;
+  eventEmailOptIn?: boolean;
+};
+
+export type ProfileUpdateInput = {
+  name: string;
+  whatsapp: string;
+  city: string;
+  region: string;
+  lodge: string;
+  lodgeNumber: string;
+  obedience: string;
+  eventEmailOptIn: boolean;
 };
 
 type AppContextValue = {
@@ -35,6 +52,7 @@ type AppContextValue = {
   blockedMembers: BlockedMember[];
   login: (email: string, password: string) => Promise<Member>;
   registerPending: (member: PendingRegistration) => void;
+  updateProfile: (profile: ProfileUpdateInput) => Promise<Member>;
   logout: () => Promise<void>;
   refreshData: () => Promise<void>;
   toggleFavorite: (listingId: string) => Promise<void>;
@@ -66,7 +84,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     const [{ data: profile, error: profileError }, { data: verification }] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id,email,full_name,phone,city,region,status')
+        .select('id,email,full_name,phone,city,region,lodge_name,lodge_number,obedience,event_email_opt_in,status')
         .eq('id', userId)
         .single(),
       supabase
@@ -85,7 +103,10 @@ export function AppProvider({ children }: PropsWithChildren) {
       whatsapp: profile.phone || '',
       city: profile.city || '',
       region: profile.region || '',
-      lodge: 'Loja a confirmar',
+      lodge: profile.lodge_name || 'Loja a confirmar',
+      lodgeNumber: profile.lodge_number || '',
+      obedience: profile.obedience || '',
+      eventEmailOptIn: Boolean(profile.event_email_opt_in),
       cimMasked: verification?.cim_last4 ? `•••• ${verification.cim_last4}` : 'Em validação',
       status: mapStatus(profile.status),
     };
@@ -191,12 +212,37 @@ export function AppProvider({ children }: PropsWithChildren) {
       name: form.name,
       email: form.email,
       whatsapp: form.whatsapp,
-      city: '',
-      region: '',
-      lodge: 'Loja a confirmar',
+      city: form.city || '',
+      region: form.region || '',
+      lodge: form.lodge || 'Loja a confirmar',
+      lodgeNumber: form.lodgeNumber || '',
+      obedience: form.obedience || '',
+      eventEmailOptIn: Boolean(form.eventEmailOptIn),
       cimMasked: `•••• ${form.cim.slice(-4)}`,
       status: 'PENDING',
     });
+  };
+
+  const updateProfile: AppContextValue['updateProfile'] = async (profile) => {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) throw new Error('Entre na sua conta para atualizar o perfil.');
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: profile.name.trim(),
+        phone: profile.whatsapp.replace(/\D/g, ''),
+        city: profile.city.trim() || null,
+        region: profile.region.trim().toUpperCase() || null,
+        lodge_name: profile.lodge.trim() || null,
+        lodge_number: profile.lodgeNumber.trim() || null,
+        obedience: profile.obedience.trim() || null,
+        event_email_opt_in: profile.eventEmailOptIn,
+      })
+      .eq('id', data.user.id);
+
+    if (error) throw error;
+    return loadMember(data.user.id, data.user.email ?? '');
   };
 
   const logout = async () => {
@@ -252,6 +298,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     blockedMembers,
     login,
     registerPending,
+    updateProfile,
     logout,
     refreshData,
     toggleFavorite,
