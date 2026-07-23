@@ -25,6 +25,7 @@ export default function RootLayout() {
         <Stack.Screen name="reset-password" options={{ title: 'Nova senha' }} />
         <Stack.Screen name="privacy" options={{ title: 'Privacidade' }} />
         <Stack.Screen name="terms" options={{ title: 'Termos de Uso' }} />
+        <Stack.Screen name="child-safety" options={{ title: 'Segurança infantil' }} />
         <Stack.Screen name="delete-account" options={{ title: 'Excluir conta' }} />
         <Stack.Screen name="blocked-members" options={{ title: 'Anunciantes bloqueados' }} />
         <Stack.Screen name="events" options={{ title: 'Eventos' }} />
