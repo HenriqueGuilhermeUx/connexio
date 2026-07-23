@@ -128,8 +128,8 @@ export default function CreateEventScreen() {
       <View style={styles.form}>
         <FormField label="Título do evento *" value={title} onChangeText={setTitle} placeholder="Ex.: Jantar da Tainha 2026" />
         <FormField label="Descrição *" value={description} onChangeText={setDescription} multiline maxLength={2000} />
-        <PhotoPicker photos={photos} onChange={(next) => setPhotos(next.slice(0, 1))} />
-        <Text style={styles.photoHint}>Use uma imagem ou cartaz oficial. Para eventos, será utilizada somente uma imagem de capa.</Text>
+        <PhotoPicker photos={photos} onChange={setPhotos} maxPhotos={1} />
+        <Text style={styles.photoHint}>Use uma imagem ou cartaz oficial como capa do evento.</Text>
 
         <View style={styles.row}>
           <View style={styles.flex}><FormField label="Data *" value={date} onChangeText={(value) => setDate(formatDateInput(value))} keyboardType="number-pad" maxLength={10} placeholder="31/05/2026" /></View>
