@@ -17,6 +17,7 @@ export default function ProfileScreen() {
   if (!member) return null;
 
   const ownListings = listings.filter((listing) => listing.ownerId === member.id);
+  const lodgeLabel = member.lodgeNumber ? `${member.lodge} nº ${member.lodgeNumber}` : member.lodge;
 
   const leave = async () => {
     await logout();
@@ -32,11 +33,25 @@ export default function ProfileScreen() {
         { icon: 'mail', label: 'E-mail', value: member.email },
         { icon: 'phone', label: 'WhatsApp', value: member.whatsapp },
         { icon: 'shield', label: 'CIM', value: member.cimMasked },
-        { icon: 'map-pin', label: 'Região', value: member.region || 'Ainda não informada' },
+        { icon: 'home', label: 'Loja', value: lodgeLabel },
+        { icon: 'map-pin', label: 'Oriente / Região', value: [member.city, member.region].filter(Boolean).join(' · ') || 'Ainda não informada' },
       ]} />
+      <Button label="Editar dados maçônicos e eventos" variant="secondary" onPress={() => router.push('/edit-profile')} />
       <OwnOffersSection listings={ownListings} />
 
-      {isAdmin ? <Button label="Abrir painel administrativo" variant="secondary" onPress={() => router.push('/admin')} /> : null}
+      <View style={styles.section}>
+        <SectionHeader title="Agenda Connexio" subtitle="Consulte e divulgue eventos da irmandade." />
+        <Button label="Ver eventos da minha região" variant="secondary" onPress={() => router.push('/events')} />
+        {member.status === 'APPROVED' ? <Button label="Divulgar um evento" variant="secondary" onPress={() => router.push('/create-event')} /> : null}
+      </View>
+
+      {isAdmin ? (
+        <View style={styles.section}>
+          <SectionHeader title="Administração" subtitle="Validação, moderação e publicação." />
+          <Button label="Abrir painel administrativo" variant="secondary" onPress={() => router.push('/admin')} />
+          <Button label="Aprovar eventos" variant="secondary" onPress={() => router.push('/admin-events')} />
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <SectionHeader title="Segurança e privacidade" subtitle="Controle sua senha, seus dados e sua conta." />
