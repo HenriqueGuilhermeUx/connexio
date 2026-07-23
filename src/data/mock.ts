@@ -6,8 +6,11 @@ export const demoMember: Member = {
   email: 'henrique@connexio.app',
   whatsapp: '5513999999999',
   city: 'Santos',
-  region: 'Baixada Santista',
-  lodge: 'ARLS Fraternidade nº 123',
+  region: 'SP',
+  lodge: 'ARLS Fraternidade',
+  lodgeNumber: '123',
+  obedience: 'GOSP',
+  eventEmailOptIn: true,
   cimMasked: '•••• 4821',
   status: 'APPROVED',
 };
