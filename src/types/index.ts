@@ -9,6 +9,8 @@ export type ListingStatus =
   | 'PAUSED'
   | 'REJECTED'
   | 'REMOVED';
+export type EventStatus = 'PENDING_REVIEW' | 'PUBLISHED' | 'REJECTED' | 'CANCELLED';
+export type EventScope = 'CITY' | 'REGION' | 'STATE' | 'NETWORK';
 
 export type Listing = {
   id: string;
@@ -44,6 +46,9 @@ export type Member = {
   city: string;
   region: string;
   lodge: string;
+  lodgeNumber: string;
+  obedience: string;
+  eventEmailOptIn: boolean;
   cimMasked: string;
   status: MemberStatus;
 };
@@ -51,5 +56,29 @@ export type Member = {
 export type BlockedMember = {
   id: string;
   name: string;
+  createdAt: string;
+};
+
+export type ConnexioEvent = {
+  id: string;
+  organizerId: string;
+  organizerName: string;
+  title: string;
+  description: string;
+  startsAt: string;
+  endsAt?: string;
+  venue: string;
+  address?: string;
+  city: string;
+  region: string;
+  lodgeName: string;
+  contactWhatsapp: string;
+  ticketPrice?: number;
+  ticketUrl?: string;
+  audienceScope: EventScope;
+  imageUrl?: string;
+  imagePath?: string;
+  status: EventStatus;
+  featured: boolean;
   createdAt: string;
 };
