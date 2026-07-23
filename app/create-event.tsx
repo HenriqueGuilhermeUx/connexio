@@ -18,6 +18,19 @@ const scopes: { value: EventScope; label: string; description: string }[] = [
   { value: 'NETWORK', label: 'Toda a rede', description: 'Disponível para todos os membros do Connexio.' },
 ];
 
+function formatDateInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function formatTimeInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
 function parseBrazilDateTime(dateValue: string, timeValue: string) {
   const [day, month, year] = dateValue.split('/').map(Number);
   const [hour, minute] = timeValue.split(':').map(Number);
@@ -119,8 +132,8 @@ export default function CreateEventScreen() {
         <Text style={styles.photoHint}>Use uma imagem ou cartaz oficial. Para eventos, será utilizada somente uma imagem de capa.</Text>
 
         <View style={styles.row}>
-          <View style={styles.flex}><FormField label="Data *" value={date} onChangeText={setDate} keyboardType="number-pad" placeholder="31/05/2026" /></View>
-          <View style={styles.small}><FormField label="Horário *" value={time} onChangeText={setTime} keyboardType="number-pad" placeholder="20:00" /></View>
+          <View style={styles.flex}><FormField label="Data *" value={date} onChangeText={(value) => setDate(formatDateInput(value))} keyboardType="number-pad" maxLength={10} placeholder="31/05/2026" /></View>
+          <View style={styles.small}><FormField label="Horário *" value={time} onChangeText={(value) => setTime(formatTimeInput(value))} keyboardType="number-pad" maxLength={5} placeholder="20:00" /></View>
         </View>
 
         <FormField label="Local *" value={venue} onChangeText={setVenue} placeholder="Ex.: Clube do Zé" />
