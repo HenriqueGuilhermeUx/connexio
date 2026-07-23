@@ -46,9 +46,9 @@ export type Member = {
   city: string;
   region: string;
   lodge: string;
-  lodgeNumber: string;
-  obedience: string;
-  eventEmailOptIn: boolean;
+  lodgeNumber?: string;
+  obedience?: string;
+  eventEmailOptIn?: boolean;
   cimMasked: string;
   status: MemberStatus;
 };
