@@ -96,10 +96,22 @@ jobs:
       - name: Gerar arquivo Android
         run: eas build --platform android --profile "$EAS_PROFILE" --local --non-interactive --output "./$OUTPUT_FILE"
 
+      - name: Preparar arquivos da versão
+        shell: bash
+        run: |
+          mkdir -p release-output
+          cp "$OUTPUT_FILE" release-output/
+
+          if [ "${{ inputs.build_type }}" = "play-store" ]; then
+            keytool -printcert -rfc -jarfile "$OUTPUT_FILE" > release-output/upload_certificate.pem
+            keytool -printcert -jarfile "$OUTPUT_FILE" | tee release-output/upload_certificate_info.txt
+            echo "Certificado público gerado para redefinição da chave de upload no Google Play."
+          fi
+
       - name: Disponibilizar para download
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
-          path: ${{ env.OUTPUT_FILE }}
+          path: release-output
           if-no-files-found: error
           retention-days: 14
