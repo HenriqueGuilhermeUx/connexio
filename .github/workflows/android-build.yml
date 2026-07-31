@@ -56,20 +56,49 @@ jobs:
       - name: Instalar dependências
         run: npm install --no-audit --no-fund
 
-      - name: Validar pacote configurado
+      - name: Preparar ícones oficiais do Connexio
+        shell: bash
+        run: |
+          base64 --decode assets/connexio-app-icon.base64 > assets/connexio-app-icon.png
+          base64 --decode assets/connexio-adaptive-foreground.base64 > assets/connexio-adaptive-foreground.png
+
+          file assets/connexio-app-icon.png
+          file assets/connexio-adaptive-foreground.png
+
+          test -s assets/connexio-app-icon.png
+          test -s assets/connexio-adaptive-foreground.png
+          echo "Ícones oficiais do Connexio preparados."
+
+      - name: Validar configuração visual e pacote
         shell: bash
         run: |
           RESOLVED_PACKAGE=$(node -e "const app=require('./app.json'); process.stdout.write(app.expo?.android?.package || '')")
+          RESOLVED_ICON=$(node -e "const app=require('./app.json'); process.stdout.write(app.expo?.android?.icon || app.expo?.icon || '')")
+          RESOLVED_ADAPTIVE_ICON=$(node -e "const app=require('./app.json'); process.stdout.write(app.expo?.android?.adaptiveIcon?.foregroundImage || '')")
+
           echo "Pacote configurado: $RESOLVED_PACKAGE"
+          echo "Ícone configurado: $RESOLVED_ICON"
+          echo "Ícone adaptativo configurado: $RESOLVED_ADAPTIVE_ICON"
+
           if [ "$RESOLVED_PACKAGE" != "$EXPECTED_ANDROID_PACKAGE" ]; then
             echo "Pacote incorreto. Esperado: $EXPECTED_ANDROID_PACKAGE"
+            exit 1
+          fi
+
+          if [ "$RESOLVED_ICON" != "./assets/connexio-app-icon.png" ]; then
+            echo "Ícone principal incorreto."
+            exit 1
+          fi
+
+          if [ "$RESOLVED_ADAPTIVE_ICON" != "./assets/connexio-adaptive-foreground.png" ]; then
+            echo "Ícone adaptativo incorreto."
             exit 1
           fi
 
       - name: Recriar projeto Android limpo
         run: npx expo prebuild --platform android --clean --non-interactive
 
-      - name: Validar pacote no projeto Android
+      - name: Validar pacote e ícones no projeto Android
         shell: bash
         run: |
           echo "Conferindo applicationId nativo..."
@@ -78,7 +107,10 @@ jobs:
             grep -n "applicationId" android/app/build.gradle || true
             exit 1
           fi
-          echo "applicationId confirmado: $EXPECTED_ANDROID_PACKAGE"
+
+          test -f android/app/src/main/res/mipmap-hdpi/ic_launcher.webp
+          test -f android/app/src/main/res/mipmap-hdpi/ic_launcher_round.webp
+          echo "applicationId e ícones nativos confirmados."
 
       - name: Definir tipo de arquivo
         shell: bash
@@ -105,7 +137,6 @@ jobs:
           if [ "${{ inputs.build_type }}" = "play-store" ]; then
             keytool -printcert -rfc -jarfile "$OUTPUT_FILE" > release-output/upload_certificate.pem
             keytool -printcert -jarfile "$OUTPUT_FILE" | tee release-output/upload_certificate_info.txt
-            echo "Certificado público gerado para redefinição da chave de upload no Google Play."
           fi
 
       - name: Disponibilizar para download
