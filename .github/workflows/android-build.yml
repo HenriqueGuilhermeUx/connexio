@@ -22,6 +22,8 @@ jobs:
     timeout-minutes: 120
     env:
       EXPECTED_ANDROID_PACKAGE: br.com.alternativeventures.connexio
+      TARGET_UPLOAD_SHA1: D5:AC:0F:BB:64:8B:69:99:87:6F:27:4E:01:06:98:3D:B9:C1:F4:74
+      EXPECTED_LAUNCHER_SHA256: 2dead15b728e96074c7050b6c77932c0730a94d12f5db8a14ea0e61b087d8e24
 
     steps:
       - name: Verificar token Expo
@@ -128,15 +130,63 @@ jobs:
       - name: Gerar arquivo Android
         run: eas build --platform android --profile "$EAS_PROFILE" --local --non-interactive --output "./$OUTPUT_FILE"
 
+      - name: Auditar artefato final
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-output
+
+          if [ "${{ inputs.build_type }}" = "play-store" ]; then
+            SIGNER_SHA1=$(keytool -printcert -jarfile "$OUTPUT_FILE" | awk -F'SHA1: ' '/SHA1:/ {print $2; exit}' | xargs)
+            echo "Assinatura encontrada: $SIGNER_SHA1"
+            echo "Assinatura esperada:  $TARGET_UPLOAD_SHA1"
+
+            if [ "$SIGNER_SHA1" != "$TARGET_UPLOAD_SHA1" ]; then
+              echo "BLOQUEADO: o AAB foi assinado com uma chave diferente da chave de upload alvo."
+              exit 1
+            fi
+
+            LAUNCHER_PATH="base/res/mipmap-xxxhdpi-v4/ic_launcher.webp"
+            unzip -p "$OUTPUT_FILE" "$LAUNCHER_PATH" > release-output/ic_launcher_from_aab.webp
+            test -s release-output/ic_launcher_from_aab.webp
+
+            LAUNCHER_SHA256=$(sha256sum release-output/ic_launcher_from_aab.webp | awk '{print $1}')
+            echo "Launcher SHA256 encontrado: $LAUNCHER_SHA256"
+            echo "Launcher SHA256 esperado:  $EXPECTED_LAUNCHER_SHA256"
+
+            if [ "$LAUNCHER_SHA256" != "$EXPECTED_LAUNCHER_SHA256" ]; then
+              echo "BLOQUEADO: o ícone empacotado no AAB não é idêntico ao launcher já auditado e aprovado."
+              exit 1
+            fi
+
+            AAB_SHA256=$(sha256sum "$OUTPUT_FILE" | awk '{print $1}')
+            cat > release-output/release-audit.txt <<EOF
+Connexio Android release gate
+Package: $EXPECTED_ANDROID_PACKAGE
+AAB: $OUTPUT_FILE
+AAB SHA256: $AAB_SHA256
+Upload certificate SHA1: $SIGNER_SHA1
+Target upload SHA1: $TARGET_UPLOAD_SHA1
+Launcher resource: $LAUNCHER_PATH
+Launcher SHA256: $LAUNCHER_SHA256
+Expected launcher SHA256: $EXPECTED_LAUNCHER_SHA256
+Result: PASS
+EOF
+          fi
+
       - name: Preparar arquivos da versão
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p release-output
           cp "$OUTPUT_FILE" release-output/
 
           if [ "${{ inputs.build_type }}" = "play-store" ]; then
-            keytool -printcert -rfc -jarfile "$OUTPUT_FILE" > release-output/upload_certificate.pem
-            keytool -printcert -jarfile "$OUTPUT_FILE" | tee release-output/upload_certificate_info.txt
+            keytool -printcert -rfc -jarfile "$OUTPUT_FILE" \
+              | sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
+              > release-output/upload_certificate.pem
+            keytool -printcert -jarfile "$OUTPUT_FILE" > release-output/upload_certificate_info.txt
+            test -s release-output/upload_certificate.pem
           fi
 
       - name: Disponibilizar para download
