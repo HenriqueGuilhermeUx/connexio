@@ -16,6 +16,10 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# EAS local signing
+credentials.json
+.ci-signing/
+
 # Metro
 .metro-health-check*
 
