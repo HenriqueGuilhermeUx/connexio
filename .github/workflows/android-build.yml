@@ -214,18 +214,18 @@ jobs:
             fi
 
             AAB_SHA256=$(sha256sum "$OUTPUT_FILE" | awk '{print $1}')
-            cat > release-output/release-audit.txt <<EOF
-Connexio Android release gate
-Package: $EXPECTED_ANDROID_PACKAGE
-AAB: $OUTPUT_FILE
-AAB SHA256: $AAB_SHA256
-Upload certificate SHA1: $SIGNER_SHA1
-Target upload SHA1: $TARGET_UPLOAD_SHA1
-Launcher resource: $LAUNCHER_PATH
-Launcher SHA256: $LAUNCHER_SHA256
-Expected launcher SHA256: $EXPECTED_LAUNCHER_SHA256
-Result: PASS
-EOF
+            printf '%s\n' \
+              "Connexio Android release gate" \
+              "Package: $EXPECTED_ANDROID_PACKAGE" \
+              "AAB: $OUTPUT_FILE" \
+              "AAB SHA256: $AAB_SHA256" \
+              "Upload certificate SHA1: $SIGNER_SHA1" \
+              "Target upload SHA1: $TARGET_UPLOAD_SHA1" \
+              "Launcher resource: $LAUNCHER_PATH" \
+              "Launcher SHA256: $LAUNCHER_SHA256" \
+              "Expected launcher SHA256: $EXPECTED_LAUNCHER_SHA256" \
+              "Result: PASS" \
+              > release-output/release-audit.txt
           fi
 
       - name: Preparar arquivos da versão
