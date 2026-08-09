@@ -29,7 +29,6 @@
     },
     "production": {
       "autoIncrement": true,
-      "credentialsSource": "local",
       "environment": "production",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://umgryjsxpvycrrcjtglm.supabase.co",
@@ -41,6 +40,10 @@
       "ios": {
         "image": "latest"
       }
+    },
+    "play-store": {
+      "extends": "production",
+      "credentialsSource": "local"
     }
   },
   "submit": {
