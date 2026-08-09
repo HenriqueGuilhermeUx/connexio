@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 120
     env:
       EXPECTED_ANDROID_PACKAGE: br.com.alternativeventures.connexio
-      TARGET_UPLOAD_SHA1: D5:AC:0F:BB:64:8B:69:99:87:6F:27:4E:01:06:98:3D:B9:C1:F4:74
+      TARGET_UPLOAD_SHA1: F7:6A:76:7A:3B:2E:C2:B1:B8:6E:C0:FE:0F:4C:66:0A:21:10:BC:A0
       EXPECTED_LAUNCHER_SHA256: 2dead15b728e96074c7050b6c77932c0730a94d12f5db8a14ea0e61b087d8e24
 
     steps:
@@ -57,6 +57,60 @@ jobs:
 
       - name: Instalar dependências
         run: npm install --no-audit --no-fund
+
+      - name: Preparar assinatura local da Play Store
+        if: ${{ inputs.build_type == 'play-store' }}
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.CONNEXIO_UPLOAD_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.CONNEXIO_UPLOAD_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.CONNEXIO_UPLOAD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.CONNEXIO_UPLOAD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "BLOQUEADO: um ou mais secrets da nova chave de upload não estão configurados."
+            exit 1
+          fi
+
+          mkdir -p .ci-signing
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > .ci-signing/connexio-upload.jks
+          chmod 600 .ci-signing/connexio-upload.jks
+          test -s .ci-signing/connexio-upload.jks
+
+          KEYSTORE_SHA1=$(keytool -list -v \
+            -keystore .ci-signing/connexio-upload.jks \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -alias "$KEY_ALIAS" \
+            | awk -F'SHA1: ' '/SHA1:/ {print $2; exit}' \
+            | xargs)
+
+          echo "SHA1 da JKS reconstruída: $KEYSTORE_SHA1"
+          echo "SHA1 autorizado:          $TARGET_UPLOAD_SHA1"
+
+          if [ "$KEYSTORE_SHA1" != "$TARGET_UPLOAD_SHA1" ]; then
+            echo "BLOQUEADO: a JKS do GitHub não corresponde à nova chave de upload autorizada."
+            exit 1
+          fi
+
+          node <<'NODE'
+          const fs = require('fs');
+          const credentials = {
+            android: {
+              keystore: {
+                keystorePath: '.ci-signing/connexio-upload.jks',
+                keystorePassword: process.env.KEYSTORE_PASSWORD,
+                keyAlias: process.env.KEY_ALIAS,
+                keyPassword: process.env.KEY_PASSWORD
+              }
+            }
+          };
+          fs.writeFileSync('credentials.json', JSON.stringify(credentials, null, 2) + '\n', { mode: 0o600 });
+          NODE
+
+          test -s credentials.json
+          echo "Credenciais locais preparadas e validadas sem gravar a chave no repositório."
 
       - name: Preparar ícones oficiais do Connexio
         shell: bash
@@ -118,7 +172,7 @@ jobs:
         shell: bash
         run: |
           if [ "${{ inputs.build_type }}" = "play-store" ]; then
-            echo "EAS_PROFILE=production" >> "$GITHUB_ENV"
+            echo "EAS_PROFILE=play-store" >> "$GITHUB_ENV"
             echo "OUTPUT_FILE=connexio-play-store-${{ github.run_number }}.aab" >> "$GITHUB_ENV"
             echo "ARTIFACT_NAME=connexio-play-store-${{ github.run_number }}" >> "$GITHUB_ENV"
           else
@@ -127,7 +181,7 @@ jobs:
             echo "ARTIFACT_NAME=connexio-apk-teste-${{ github.run_number }}" >> "$GITHUB_ENV"
           fi
 
-      - name: Gerar arquivo Android
+      - name: Gerar arquivo Android no runner do GitHub
         run: eas build --platform android --profile "$EAS_PROFILE" --local --non-interactive --output "./$OUTPUT_FILE"
 
       - name: Auditar artefato final
@@ -142,7 +196,7 @@ jobs:
             echo "Assinatura esperada:  $TARGET_UPLOAD_SHA1"
 
             if [ "$SIGNER_SHA1" != "$TARGET_UPLOAD_SHA1" ]; then
-              echo "BLOQUEADO: o AAB foi assinado com uma chave diferente da chave de upload alvo."
+              echo "BLOQUEADO: o AAB foi assinado com uma chave diferente da nova chave de upload."
               exit 1
             fi
 
@@ -155,7 +209,7 @@ jobs:
             echo "Launcher SHA256 esperado:  $EXPECTED_LAUNCHER_SHA256"
 
             if [ "$LAUNCHER_SHA256" != "$EXPECTED_LAUNCHER_SHA256" ]; then
-              echo "BLOQUEADO: o ícone empacotado no AAB não é idêntico ao launcher já auditado e aprovado."
+              echo "BLOQUEADO: o ícone empacotado no AAB não é idêntico ao launcher Connexio já auditado."
               exit 1
             fi
 
@@ -196,3 +250,9 @@ EOF
           path: release-output
           if-no-files-found: error
           retention-days: 14
+
+      - name: Remover credenciais temporárias
+        if: always()
+        shell: bash
+        run: |
+          rm -rf .ci-signing credentials.json
