@@ -37,6 +37,7 @@ export default function RootLayout() {
         <Stack.Screen name="listing/[id]" options={{ title: 'Oferta' }} />
         <Stack.Screen name="report/[id]" options={{ title: 'Denunciar oferta' }} />
         <Stack.Screen name="admin" options={{ title: 'Administração' }} />
+        <Stack.Screen name="admin-dashboard" options={{ headerShown: false }} />
       </Stack>
     </AppProvider>
   );
