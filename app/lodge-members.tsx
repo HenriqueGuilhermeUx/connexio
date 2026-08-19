@@ -1,6 +1,7 @@
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { useApp } from '@/context/AppContext';
+import { persistLodgeInvitation, persistLodgeMemberRole } from '@/lib/lodgeMembersRepository';
 import { colors } from '@/theme/colors';
 import { LodgeRole } from '@/types';
 import { Feather } from '@expo/vector-icons';
@@ -16,18 +17,45 @@ export default function LodgeMembersScreen() {
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [role, setRole] = useState<LodgeRole>('MEMBER');
+  const [loading, setLoading] = useState(false);
 
-  const add = () => {
+  const add = async () => {
     if (!name.trim() || !email.trim()) {
       Alert.alert('Dados obrigatórios', 'Informe nome e e-mail do membro.');
       return;
     }
-    addLodgeMember({ name: name.trim(), email: email.trim(), whatsapp: whatsapp.trim() || undefined, role });
-    setName('');
-    setEmail('');
-    setWhatsapp('');
-    setRole('MEMBER');
-    Alert.alert('Membro adicionado', 'O vínculo foi incluído na Loja. No backend, o convite será enviado ao e-mail informado.');
+
+    setLoading(true);
+    try {
+      if (lodge) {
+        await persistLodgeInvitation(lodge.id, {
+          name: name.trim(),
+          email: email.trim(),
+          whatsapp: whatsapp.trim() || undefined,
+          role,
+        });
+      }
+      addLodgeMember({ name: name.trim(), email: email.trim(), whatsapp: whatsapp.trim() || undefined, role });
+      setName('');
+      setEmail('');
+      setWhatsapp('');
+      setRole('MEMBER');
+      Alert.alert('Convite criado', 'O irmão foi incluído na lista. No modo conectado, o vínculo será ativado quando ele entrar com o e-mail convidado.');
+    } catch (error) {
+      Alert.alert('Não foi possível convidar', error instanceof Error ? error.message : 'Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changeRole = async (memberId: string, currentRole: LodgeRole) => {
+    const roleToSet = nextRole(currentRole);
+    try {
+      if (lodge) await persistLodgeMemberRole(lodge.id, memberId, roleToSet);
+      updateLodgeMemberRole(memberId, roleToSet);
+    } catch (error) {
+      Alert.alert('Não foi possível alterar o cargo', error instanceof Error ? error.message : 'Tente novamente.');
+    }
   };
 
   return (
@@ -39,7 +67,7 @@ export default function LodgeMembersScreen() {
       </View>
 
       <View style={styles.formCard}>
-        <Text style={styles.formTitle}>Adicionar membro</Text>
+        <Text style={styles.formTitle}>Convidar membro</Text>
         <TextInput value={name} onChangeText={setName} placeholder="Nome completo" placeholderTextColor={colors.textMuted} style={styles.input} />
         <TextInput value={email} onChangeText={setEmail} placeholder="E-mail" placeholderTextColor={colors.textMuted} keyboardType="email-address" autoCapitalize="none" style={styles.input} />
         <TextInput value={whatsapp} onChangeText={setWhatsapp} placeholder="WhatsApp (opcional)" placeholderTextColor={colors.textMuted} keyboardType="phone-pad" style={styles.input} />
@@ -50,7 +78,7 @@ export default function LodgeMembersScreen() {
             </Pressable>
           ))}
         </View>
-        <Button label="Adicionar à Loja" onPress={add} />
+        <Button label="Convidar para a Loja" loading={loading} onPress={() => void add()} />
       </View>
 
       <View style={styles.section}>
@@ -64,11 +92,7 @@ export default function LodgeMembersScreen() {
               <Text style={styles.memberRole}>{roleLabel(item.role)} · {item.status === 'ACTIVE' ? 'Ativo' : item.status === 'PENDING' ? 'Pendente' : 'Inativo'}</Text>
             </View>
             {item.role !== 'WORSHIPFUL_MASTER' ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => updateLodgeMemberRole(item.id, nextRole(item.role))}
-                style={styles.roleButton}
-              >
+              <Pressable accessibilityRole="button" onPress={() => void changeRole(item.id, item.role)} style={styles.roleButton}>
                 <Feather name="repeat" size={15} color={colors.gold} />
               </Pressable>
             ) : null}
