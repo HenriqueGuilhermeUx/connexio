@@ -1,9 +1,10 @@
 import { demoLodge, demoMember, demoMembership, initialListings } from '@/data/mock';
+import { signInConnexio } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 import {
   Announcement,
   Charge,
   FinancialEntry,
-  FinancialEntryType,
   Listing,
   Lodge,
   LodgeEvent,
@@ -40,6 +41,7 @@ type AppContextValue = {
   listings: Listing[];
   favorites: string[];
   loginDemo: () => void;
+  loginWithCredentials: (email: string, password: string) => Promise<'REMOTE' | 'DEMO'>;
   registerPending: (member: Omit<Member, 'id' | 'status' | 'cimMasked'> & { cim: string }) => void;
   logout: () => void;
   toggleFavorite: (listingId: string) => void;
@@ -103,12 +105,28 @@ export function AppProvider({ children }: PropsWithChildren) {
 
   const loginDemo = () => { setMember(demoMember); setLodge(demoLodge); setMembership(demoMembership); };
 
+  const loginWithCredentials: AppContextValue['loginWithCredentials'] = async (email, password) => {
+    const authenticated = await signInConnexio(email, password);
+    if (!authenticated) {
+      loginDemo();
+      return 'DEMO';
+    }
+    setMember(authenticated.member);
+    setLodge(authenticated.lodge);
+    setMembership(authenticated.membership);
+    return 'REMOTE';
+  };
+
   const registerPending: AppContextValue['registerPending'] = (form) => {
     setMember({ id: `member-${Date.now()}`, name: form.name, email: form.email, whatsapp: form.whatsapp, city: form.city, region: form.region, lodge: form.lodge, cimMasked: `•••• ${form.cim.slice(-4)}`, status: 'PENDING' });
     setLodge(null); setMembership(null);
   };
 
-  const logout = () => { setMember(null); setLodge(null); setMembership(null); setFavorites([]); };
+  const logout = () => {
+    setMember(null); setLodge(null); setMembership(null); setFavorites([]);
+    if (supabase) void supabase.auth.signOut();
+  };
+
   const toggleFavorite = (listingId: string) => setFavorites((current) => current.includes(listingId) ? current.filter((id) => id !== listingId) : [...current, listingId]);
 
   const createListing: AppContextValue['createListing'] = (form) => {
@@ -176,7 +194,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     setCharges((current) => [charge, ...current]); return charge;
   };
 
-  const value: AppContextValue = { member, status: member?.status ?? 'GUEST', lodge, membership, lodgeMembers, managementRequests, announcements, lodgeEvents, polls, financialEntries, charges, listings, favorites, loginDemo, registerPending, logout, toggleFavorite, createListing, submitManagementRequest, decideManagementRequest, addLodgeMember, updateLodgeMemberRole, createAnnouncement, createLodgeEvent, toggleEventAttendance, createPoll, votePoll, createFinancialEntry, markFinancialEntryPaid, createCharge };
+  const value: AppContextValue = { member, status: member?.status ?? 'GUEST', lodge, membership, lodgeMembers, managementRequests, announcements, lodgeEvents, polls, financialEntries, charges, listings, favorites, loginDemo, loginWithCredentials, registerPending, logout, toggleFavorite, createListing, submitManagementRequest, decideManagementRequest, addLodgeMember, updateLodgeMemberRole, createAnnouncement, createLodgeEvent, toggleEventAttendance, createPoll, votePoll, createFinancialEntry, markFinancialEntryPaid, createCharge };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
