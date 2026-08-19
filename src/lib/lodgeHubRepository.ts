@@ -50,7 +50,7 @@ export async function uploadLodgeDocument(lodgeId: string, input: { title: strin
   if (!auth.user) throw new Error('Faça login novamente.');
 
   const safeName = sanitizeFileName(input.file.name);
-  const path = `${lodgeId}/${crypto.randomUUID()}-${safeName}`;
+  const path = `${lodgeId}/${uniqueFileId()}-${safeName}`;
   const response = await fetch(input.file.uri);
   const buffer = await response.arrayBuffer();
   const { error: uploadError } = await supabase.storage.from('lodge-documents').upload(path, buffer, {
@@ -95,7 +95,7 @@ export async function uploadLearningMaterial(lodgeId: string, learningItemId: st
   if (!auth.user) throw new Error('Faça login novamente.');
 
   const safeName = sanitizeFileName(input.file.name);
-  const path = `${lodgeId}/${learningItemId}/${crypto.randomUUID()}-${safeName}`;
+  const path = `${lodgeId}/${learningItemId}/${uniqueFileId()}-${safeName}`;
   const response = await fetch(input.file.uri);
   const buffer = await response.arrayBuffer();
   const { error: uploadError } = await supabase.storage.from('lodge-learning').upload(path, buffer, {
@@ -170,4 +170,8 @@ export async function loadOwnLearningProgress(itemIds: string[]) {
 
 function sanitizeFileName(name: string) {
   return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]/g, '-').replace(/-+/g, '-');
+}
+
+function uniqueFileId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
