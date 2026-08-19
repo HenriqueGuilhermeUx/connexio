@@ -81,6 +81,7 @@ export type ManagementRequest = {
   region: string;
   requestedRole: Extract<LodgeRole, 'SECRETARY' | 'TREASURER' | 'WORSHIPFUL_MASTER'>;
   evidenceName: string;
+  evidencePath?: string;
   evidenceType: 'POSSESSION_TERM' | 'APPOINTMENT' | 'OTHER';
   notes?: string;
   status: ManagementRequestStatus;
