@@ -1,14 +1,33 @@
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { useApp } from '@/context/AppContext';
+import { buildCredentialVerificationUrl, getMemberCredentialToken } from '@/lib/credentials';
 import { colors } from '@/theme/colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import QRCode from 'react-native-qrcode-svg';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 export default function MemberCardScreen() {
   const { member, lodge, membership } = useApp();
+  const [token, setToken] = useState<string | null>(null);
+  const [loadingToken, setLoadingToken] = useState(false);
+
+  useEffect(() => {
+    if (!membership) return;
+    setLoadingToken(true);
+    void getMemberCredentialToken(membership.id)
+      .then((value) => setToken(value ?? null))
+      .catch(() => setToken(null))
+      .finally(() => setLoadingToken(false));
+  }, [membership]);
+
+  const credentialValue = useMemo(() => {
+    if (token) return buildCredentialVerificationUrl(token);
+    if (!member || !membership || !lodge) return '';
+    return JSON.stringify({ type: 'CONNEXIO_MEMBER_DEMO', memberId: member.id, membershipId: membership.id, lodgeId: lodge.id, version: 1 });
+  }, [token, member, membership, lodge]);
 
   if (!member || !lodge || !membership) {
     return (
@@ -19,14 +38,6 @@ export default function MemberCardScreen() {
       </Screen>
     );
   }
-
-  const credential = JSON.stringify({
-    type: 'CONNEXIO_MEMBER',
-    memberId: member.id,
-    membershipId: membership.id,
-    lodgeId: lodge.id,
-    version: 1,
-  });
 
   return (
     <Screen contentStyle={styles.content}>
@@ -58,11 +69,11 @@ export default function MemberCardScreen() {
 
         <View style={styles.qrArea}>
           <View style={styles.qrBox}>
-            <QRCode value={credential} size={132} backgroundColor="#FFFFFF" color="#111111" />
+            {loadingToken ? <ActivityIndicator color="#111111" /> : <QRCode value={credentialValue} size={132} backgroundColor="#FFFFFF" color="#111111" />}
           </View>
           <View style={styles.qrCopy}>
             <Text style={styles.qrTitle}>QR verificável</Text>
-            <Text style={styles.qrText}>A leitura identifica a credencial. A validação definitiva será feita pelo backend Connexio.</Text>
+            <Text style={styles.qrText}>{token ? 'A leitura consulta uma credencial opaca e revogável no backend Connexio.' : 'Modo demonstração: a validação remota será ativada quando o backend estiver configurado.'}</Text>
             <View style={styles.activePill}><Text style={styles.activeText}>VÍNCULO ATIVO</Text></View>
           </View>
         </View>
@@ -75,7 +86,7 @@ export default function MemberCardScreen() {
 
       <View style={styles.notice}>
         <MaterialCommunityIcons name="shield-check-outline" size={22} color={colors.gold} />
-        <Text style={styles.noticeText}>O QR não expõe e-mail, telefone ou CIM completo. Na etapa de backend, a consulta retornará apenas os dados autorizados e o status do vínculo.</Text>
+        <Text style={styles.noticeText}>O QR não expõe e-mail, telefone ou CIM completo. A validação retorna somente nome, Loja, Oriente, cargo e situação da credencial.</Text>
       </View>
 
       <Button label="Voltar ao perfil" variant="secondary" onPress={() => router.back()} />
@@ -102,7 +113,7 @@ const styles = StyleSheet.create({
   orient: { color: colors.textMuted, fontSize: 11 },
   divider: { height: 1, backgroundColor: colors.border },
   qrArea: { flexDirection: 'row', gap: 16, alignItems: 'center' },
-  qrBox: { padding: 9, borderRadius: 14, backgroundColor: '#FFFFFF' },
+  qrBox: { width: 150, height: 150, padding: 9, borderRadius: 14, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   qrCopy: { flex: 1, gap: 7 },
   qrTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
   qrText: { color: colors.textMuted, fontSize: 10, lineHeight: 15 },
