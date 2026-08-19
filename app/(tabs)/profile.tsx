@@ -52,8 +52,10 @@ export default function ProfileScreen() {
 
       {member?.status === 'APPROVED' && lodge && membership ? (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Identidade</Text>
-          <Button label="Abrir carteirinha digital" onPress={() => router.push('/member-card')} />
+          <Text style={styles.sectionTitle}>Minha Loja</Text>
+          <Button label="Abrir Central da Loja" onPress={() => router.push('/lodge-hub')} />
+          <Text style={styles.helper}>Comunicados, sessões, educação e documentos compartilhados pela gestão.</Text>
+          <Button label="Abrir carteirinha digital" variant="secondary" onPress={() => router.push('/member-card')} />
           <Text style={styles.helper}>QR verificável, revogável e sem expor dados pessoais sensíveis.</Text>
         </View>
       ) : null}
