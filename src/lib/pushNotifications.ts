@@ -4,14 +4,16 @@ import { Platform } from 'react-native';
 
 const EAS_PROJECT_ID = 'cdcb129b-043c-4823-be6f-4e7dc0b7ddeb';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 export async function registerDevicePushToken() {
   if (!supabase || Platform.OS === 'web') return null;
