@@ -1,6 +1,9 @@
 import { demoLodge, demoMember, demoMembership, initialListings } from '@/data/mock';
 import {
   Announcement,
+  Charge,
+  FinancialEntry,
+  FinancialEntryType,
   Listing,
   Lodge,
   LodgeEvent,
@@ -19,6 +22,8 @@ type NewManagementRequest = Omit<ManagementRequest, 'id' | 'requesterId' | 'requ
 type NewLodgeMember = Omit<LodgeMember, 'id' | 'status'>;
 type NewAnnouncement = Omit<Announcement, 'id' | 'lodgeId' | 'createdAt'>;
 type NewLodgeEvent = Omit<LodgeEvent, 'id' | 'lodgeId' | 'attendeeIds'>;
+type NewFinancialEntry = Omit<FinancialEntry, 'id' | 'lodgeId' | 'status' | 'paidAt'>;
+type NewCharge = Omit<Charge, 'id' | 'lodgeId' | 'status' | 'pixReference'>;
 
 type AppContextValue = {
   member: Member | null;
@@ -30,6 +35,8 @@ type AppContextValue = {
   announcements: Announcement[];
   lodgeEvents: LodgeEvent[];
   polls: Poll[];
+  financialEntries: FinancialEntry[];
+  charges: Charge[];
   listings: Listing[];
   favorites: string[];
   loginDemo: () => void;
@@ -46,6 +53,9 @@ type AppContextValue = {
   toggleEventAttendance: (eventId: string) => void;
   createPoll: (question: string, optionLabels: string[], closesAt?: string) => Poll;
   votePoll: (pollId: string, optionId: string) => void;
+  createFinancialEntry: (entry: NewFinancialEntry) => FinancialEntry;
+  markFinancialEntryPaid: (entryId: string) => void;
+  createCharge: (charge: NewCharge) => Charge;
 };
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
@@ -68,6 +78,15 @@ const initialPolls: Poll[] = [
   { id: 'poll-1', lodgeId: demoLodge.id, question: 'Qual data é melhor para o jantar da Loja?', options: [{ id: 'poll-1-a', label: '12 de setembro', votes: 8 }, { id: 'poll-1-b', label: '19 de setembro', votes: 5 }], active: true, totalVotes: 13 },
 ];
 
+const initialFinancialEntries: FinancialEntry[] = [
+  { id: 'financial-1', lodgeId: demoLodge.id, type: 'PAYABLE', description: 'Energia elétrica', category: 'Utilidades', amount: 486.2, dueDate: '2026-08-25', status: 'OPEN', recurring: true },
+  { id: 'financial-2', lodgeId: demoLodge.id, type: 'RECEIVABLE', description: 'Mensalidades de agosto', category: 'Mensalidades', amount: 3250, dueDate: '2026-08-10', status: 'OPEN', recurring: true },
+];
+
+const initialCharges: Charge[] = [
+  { id: 'charge-1', lodgeId: demoLodge.id, memberId: 'member-roberto-lodge', memberName: 'Roberto Almeida', description: 'Mensalidade agosto', amount: 150, dueDate: '2026-08-10', status: 'PENDING' },
+];
+
 export function AppProvider({ children }: PropsWithChildren) {
   const [member, setMember] = useState<Member | null>(null);
   const [listings, setListings] = useState<Listing[]>(initialListings);
@@ -79,6 +98,8 @@ export function AppProvider({ children }: PropsWithChildren) {
   const [announcements, setAnnouncements] = useState<Announcement[]>(initialAnnouncements);
   const [lodgeEvents, setLodgeEvents] = useState<LodgeEvent[]>(initialEvents);
   const [polls, setPolls] = useState<Poll[]>(initialPolls);
+  const [financialEntries, setFinancialEntries] = useState<FinancialEntry[]>(initialFinancialEntries);
+  const [charges, setCharges] = useState<Charge[]>(initialCharges);
 
   const loginDemo = () => { setMember(demoMember); setLodge(demoLodge); setMembership(demoMembership); };
 
@@ -88,7 +109,6 @@ export function AppProvider({ children }: PropsWithChildren) {
   };
 
   const logout = () => { setMember(null); setLodge(null); setMembership(null); setFavorites([]); };
-
   const toggleFavorite = (listingId: string) => setFavorites((current) => current.includes(listingId) ? current.filter((id) => id !== listingId) : [...current, listingId]);
 
   const createListing: AppContextValue['createListing'] = (form) => {
@@ -144,7 +164,19 @@ export function AppProvider({ children }: PropsWithChildren) {
 
   const votePoll: AppContextValue['votePoll'] = (pollId, optionId) => setPolls((current) => current.map((poll) => poll.id !== pollId ? poll : { ...poll, totalVotes: poll.totalVotes + 1, options: poll.options.map((option) => option.id === optionId ? { ...option, votes: option.votes + 1 } : option) }));
 
-  const value: AppContextValue = { member, status: member?.status ?? 'GUEST', lodge, membership, lodgeMembers, managementRequests, announcements, lodgeEvents, polls, listings, favorites, loginDemo, registerPending, logout, toggleFavorite, createListing, submitManagementRequest, decideManagementRequest, addLodgeMember, updateLodgeMemberRole, createAnnouncement, createLodgeEvent, toggleEventAttendance, createPoll, votePoll };
+  const createFinancialEntry: AppContextValue['createFinancialEntry'] = (form) => {
+    const entry: FinancialEntry = { ...form, id: `financial-${Date.now()}`, lodgeId: lodge?.id ?? demoLodge.id, status: 'OPEN' };
+    setFinancialEntries((current) => [entry, ...current]); return entry;
+  };
+
+  const markFinancialEntryPaid: AppContextValue['markFinancialEntryPaid'] = (entryId) => setFinancialEntries((current) => current.map((entry) => entry.id === entryId ? { ...entry, status: 'PAID', paidAt: new Date().toISOString() } : entry));
+
+  const createCharge: AppContextValue['createCharge'] = (form) => {
+    const charge: Charge = { ...form, id: `charge-${Date.now()}`, lodgeId: lodge?.id ?? demoLodge.id, status: 'DRAFT' };
+    setCharges((current) => [charge, ...current]); return charge;
+  };
+
+  const value: AppContextValue = { member, status: member?.status ?? 'GUEST', lodge, membership, lodgeMembers, managementRequests, announcements, lodgeEvents, polls, financialEntries, charges, listings, favorites, loginDemo, registerPending, logout, toggleFavorite, createListing, submitManagementRequest, decideManagementRequest, addLodgeMember, updateLodgeMemberRole, createAnnouncement, createLodgeEvent, toggleEventAttendance, createPoll, votePoll, createFinancialEntry, markFinancialEntryPaid, createCharge };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
