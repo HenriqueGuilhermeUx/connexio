@@ -23,101 +23,50 @@ Aplicar as migrations novas **uma única vez e na ordem cronológica**:
 11. `20260819210000_sol_core.sql`
 12. `20260819213000_sol_people_candidates_education_transition.sql`
 13. `20260819214500_push_notifications.sql`
+14. `20260819215500_gestor_pro_activation.sql`
+15. `20260819220000_enforce_gestor_pro.sql`
+16. `20260819221000_pro_task_engine_guard.sql`
 
 A ponte reaproveita usuários e Admin do domínio anterior quando `profiles`/`app_admins` existirem. Não recriar a conta fundadora.
 
+As três últimas migrations criam a solicitação/ativação comercial do Pro e fazem o backend — não apenas a interface — exigir `lodges.plan = 'PRO'` nos módulos avançados.
+
 ## 2. Edge Function de push
 
-Implantar:
+Implantar `supabase/functions/send-lodge-push/index.ts`.
 
-`supabase/functions/send-lodge-push/index.ts`
-
-A função:
-
-- recebe `announcement_id` autenticado;
-- valida se o usuário pode gerir a Loja;
-- busca membros ativos e tokens com `service_role` apenas no servidor;
-- envia mensagens pela API do Expo Push;
-- nunca devolve a lista de tokens ao cliente.
-
-O `service_role` permanece exclusivamente no ambiente da Edge Function.
+A função recebe `announcement_id`, valida a gestão da Loja, busca membros/tokens apenas no servidor e envia o comunicado pela API de Push do Expo sem expor tokens ao cliente. O `service_role` permanece exclusivamente no ambiente da Edge Function.
 
 ## 3. Variáveis públicas
 
 No app/Netlify usar somente:
-
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `EXPO_PUBLIC_APP_URL`
 
-A URL e publishable key do projeto histórico já estão no perfil EAS. Defina `EXPO_PUBLIC_APP_URL` após criar a URL definitiva no Netlify.
-
-Nunca colocar `service_role`, senha do banco, keystore ou secrets de provedor no app/Netlify.
+Defina `EXPO_PUBLIC_APP_URL` após criar a URL definitiva no Netlify. Nunca colocar `service_role`, senha do banco, keystore ou outros secrets no app/Netlify.
 
 ## 4. Netlify
 
-Conectar o site ao **mesmo repositório** Connexio.
+Conectar o site ao mesmo repositório Connexio. O repo já define build `npm run build:web`, diretório `dist`, Node 20 e fallback SPA. Depois do primeiro deploy, configure `EXPO_PUBLIC_APP_URL` e refaça o deploy para o QR apontar à validação Web real.
 
-Configuração já versionada:
-
-- comando: `npm run build:web`
-- diretório: `dist`
-- Node 20;
-- fallback SPA em `netlify.toml`.
-
-Depois do primeiro deploy, configurar `EXPO_PUBLIC_APP_URL` e refazer o deploy. O QR da carteirinha passa a apontar para `/verify-credential?token=...` na URL real.
-
-## 5. Supabase Auth
-
-- manter Email habilitado;
-- manter usuários existentes;
-- adicionar URL Web definitiva em Site URL/Redirect URLs quando necessário;
-- manter deep links `connexio://` usados pelo mobile.
-
-## 6. Testes funcionais obrigatórios
+## 5. Testes funcionais obrigatórios
 
 ### Identidade/Admin
-1. login de usuário real;
-2. aprovação de membro;
-3. confirmar que somente Admin vê acesso administrativo;
-4. solicitar gestão de Loja com PDF/imagem;
-5. abrir documento por URL assinada;
-6. aprovar gestor e confirmar Loja + cargo + credencial.
+1. login real; 2. aprovação de membro; 3. Admin visível só para Admin; 4. solicitação de gestão com documento; 5. URL assinada; 6. aprovação de gestor e credencial.
 
-### Membro/Free
-7. abrir carteirinha e validar QR;
-8. convidar membro por e-mail;
-9. criar comunicado;
-10. registrar dispositivo Android e testar push;
-11. criar agenda/evento;
-12. criar votação simples;
-13. criar sessão;
-14. ler QR pela câmera e confirmar presença/frequência.
+### Gestor Free
+7. carteirinha/QR; 8. convite de membro; 9. comunicado + push; 10. agenda/evento; 11. votação simples; 12. sessão; 13. leitura do QR pela câmera e presença.
 
-### Pro/SOL
-15. abrir Hoje na Loja e atualizar tarefas automáticas;
-16. validar Semáforo;
-17. registrar acompanhamento de membro;
-18. cadastrar candidato e concluir checklist de sindicância;
-19. criar/semear trilha de educação;
-20. criar plano, meta e projeto;
-21. registrar ata;
-22. gerar checklist de transição;
-23. criar conta a pagar/receber e anexar documento;
-24. dar baixa;
-25. criar cobrança;
-26. criar obrigação/vencimento.
+### Gestor Pro
+14. confirmar que Loja FREE não acessa Pro nem por rota/API; 15. solicitar Pro; 16. aprovar em `/admin-pro`; 17. confirmar `lodges.plan = PRO`; 18. Hoje na Loja; 19. Semáforo; 20. acompanhamento; 21. candidatos/sindicância; 22. educação; 23. planejamento; 24. ata; 25. transição; 26. tesouraria; 27. cobrança; 28. obrigação/documentos.
 
 ### Web
-27. repetir fluxo Gestor no desktop;
-28. acessar rota profunda diretamente no navegador;
-29. validar QR por URL Web;
-30. confirmar que documentos privados continuam protegidos.
+29. repetir fluxo Gestor no desktop; 30. abrir rota profunda; 31. validar QR por URL Web; 32. confirmar isolamento de documentos e módulos Pro.
 
-## 7. Release Android
+## 6. Release Android
 
 Antes do AAB:
-
 ```bash
 npm run assets
 npm run validate:release
@@ -125,26 +74,10 @@ npm run typecheck
 npm run build:web
 ```
 
-Depois execute `.github/workflows/android-build.yml` na branch candidata com `build_type=play-store`.
-
-O workflow deve bloquear divergências de:
-
-- versão `0.4.0`;
-- package `br.com.alternativeventures.connexio`;
-- EAS project oficial;
-- certificado de upload;
-- launcher aprovado.
+Depois execute `.github/workflows/android-build.yml` na branch candidata com `build_type=play-store`. O gate valida versão `0.4.0`, package oficial, EAS project, certificado de upload e launcher aprovado.
 
 O EAS usa versionamento remoto + autoIncrement. Como a versão anterior aprovada tinha `versionCode 5`, confirme no artefato/Play Console que a nova release recebeu `versionCode 6` ou superior.
 
-## 8. Regra de merge/publicação
+## 7. Regra de publicação
 
-Manter o PR draft e o `main` intacto até:
-
-- migrations aplicadas sem erro;
-- Edge Function implantada;
-- CI verde;
-- preview Web testado;
-- Android real testado;
-- AAB auditado;
-- Play Console aceitar o artifact.
+Manter o PR draft e o `main` intacto até migrations aplicadas, Edge Function implantada, CI verde, preview Web testado, Android real testado, AAB auditado e Play Console aceitar o artifact.
