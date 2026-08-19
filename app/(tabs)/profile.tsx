@@ -7,8 +7,9 @@ import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function ProfileScreen() {
-  const { member, listings, logout } = useApp();
+  const { member, listings, lodge, membership, logout } = useApp();
   const ownListings = listings.filter((listing) => listing.ownerId === member?.id);
+  const canManage = membership?.role === 'WORSHIPFUL_MASTER' || membership?.role === 'SECRETARY' || membership?.role === 'TREASURER';
 
   const leave = () => {
     logout();
@@ -35,6 +36,22 @@ export default function ProfileScreen() {
         <View style={styles.stat}><Text style={styles.statValue}>{member?.city ?? '—'}</Text><Text style={styles.statLabel}>Cidade</Text></View>
       </View>
 
+      {member?.status === 'APPROVED' && lodge && membership ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Identidade</Text>
+          <Button label="Abrir carteirinha digital" onPress={() => router.push('/member-card')} />
+          <Text style={styles.helper}>QR verificável, vínculo com a Loja e dados protegidos.</Text>
+        </View>
+      ) : null}
+
+      {canManage ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Minha Loja</Text>
+          <Button label="Abrir Connexio Gestor" variant="secondary" onPress={() => router.push('/manager')} />
+          <Text style={styles.helper}>Gestão gratuita de membros, comunicação, agenda, eventos e votações. Gestor Pro: R$ 49,90/mês por Loja.</Text>
+        </View>
+      ) : null}
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Dados validados</Text>
         <View style={styles.infoCard}>
@@ -46,9 +63,9 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Operação</Text>
+        <Text style={styles.sectionTitle}>Admin Connexio</Text>
         <Button label="Abrir painel administrativo" variant="secondary" onPress={() => router.push('/admin')} />
-        <Text style={styles.adminNote}>Acesso visível apenas no protótipo para validar o fluxo de aprovação.</Text>
+        <Text style={styles.adminNote}>Acesso administrativo permanece separado da gestão de cada Loja.</Text>
       </View>
 
       <Button label="Sair da conta" variant="danger" onPress={leave} />
@@ -83,6 +100,7 @@ const styles = StyleSheet.create({
   statDivider: { width: 1, backgroundColor: colors.border },
   section: { gap: 12 },
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '800' },
+  helper: { color: colors.textMuted, fontSize: 11, lineHeight: 16, textAlign: 'center' },
   infoCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, overflow: 'hidden' },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 15, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   infoIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
