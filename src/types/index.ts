@@ -4,6 +4,7 @@ export type MemberStatus = 'GUEST' | 'PENDING' | 'APPROVED';
 export type LodgePlan = 'FREE' | 'PRO';
 export type LodgeRole = 'MEMBER' | 'SECRETARY' | 'TREASURER' | 'WORSHIPFUL_MASTER';
 export type MembershipStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING';
+export type ManagementRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export type Listing = {
   id: string;
@@ -55,6 +56,33 @@ export type Membership = {
   status: MembershipStatus;
   joinedAt?: string;
   verifiedAt?: string;
+};
+
+export type LodgeMember = {
+  id: string;
+  name: string;
+  email: string;
+  whatsapp?: string;
+  role: LodgeRole;
+  status: MembershipStatus;
+};
+
+export type ManagementRequest = {
+  id: string;
+  requesterId: string;
+  requesterName: string;
+  requesterEmail: string;
+  lodgeName: string;
+  lodgeNumber?: string;
+  orient: string;
+  region: string;
+  requestedRole: Extract<LodgeRole, 'SECRETARY' | 'TREASURER' | 'WORSHIPFUL_MASTER'>;
+  evidenceName: string;
+  evidenceType: 'POSSESSION_TERM' | 'APPOINTMENT' | 'OTHER';
+  notes?: string;
+  status: ManagementRequestStatus;
+  createdAt: string;
+  decidedAt?: string;
 };
 
 export type MemberCredential = {
