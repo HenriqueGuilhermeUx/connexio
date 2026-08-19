@@ -1,3 +1,4 @@
+import { acceptPendingLodgeInvitations } from '@/lib/lodgeMembersRepository';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { Lodge, Membership, Member } from '@/types';
 
@@ -43,6 +44,8 @@ export async function signInConnexio(email: string, password: string) {
   if (authError) throw authError;
 
   const userId = authData.user.id;
+  await acceptPendingLodgeInvitations();
+
   const [{ data: profile, error: profileError }, { data: verification, error: verificationError }] = await Promise.all([
     supabase.from('member_profiles').select('*').eq('id', userId).single(),
     supabase.from('member_verifications').select('cim_last4,status').eq('user_id', userId).maybeSingle(),
