@@ -1,5 +1,15 @@
 import { demoLodge, demoMember, demoMembership, initialListings } from '@/data/mock';
 import { signInConnexio } from '@/lib/auth';
+import {
+  persistAnnouncement,
+  persistCharge,
+  persistEventAttendance,
+  persistFinancialEntry,
+  persistFinancialEntryPaid,
+  persistLodgeEvent,
+  persistPoll,
+  persistPollVote,
+} from '@/lib/lodgeRepository';
 import { supabase } from '@/lib/supabase';
 import {
   Announcement,
@@ -16,7 +26,7 @@ import {
   MemberStatus,
   Poll,
 } from '@/types';
-import React, { createContext, PropsWithChildren, useContext, useState } from 'react';
+import React, { createContext, PropsWithChildren, useContext, useRef, useState } from 'react';
 
 type NewListing = Omit<Listing, 'id' | 'ownerId' | 'ownerName' | 'ownerLodge' | 'ownerVerified' | 'phone' | 'createdAt'>;
 type NewManagementRequest = Omit<ManagementRequest, 'id' | 'requesterId' | 'requesterName' | 'requesterEmail' | 'status' | 'createdAt'>;
@@ -102,6 +112,17 @@ export function AppProvider({ children }: PropsWithChildren) {
   const [polls, setPolls] = useState<Poll[]>(initialPolls);
   const [financialEntries, setFinancialEntries] = useState<FinancialEntry[]>(initialFinancialEntries);
   const [charges, setCharges] = useState<Charge[]>(initialCharges);
+  const remoteIds = useRef(new Map<string, string>());
+
+  const rememberRemoteId = (localId: string, remoteId: string | null | undefined) => {
+    if (remoteId) remoteIds.current.set(localId, remoteId);
+  };
+
+  const persistQuietly = (task: Promise<unknown>) => {
+    void task.catch((error) => {
+      if (__DEV__) console.warn('[Connexio persistence]', error);
+    });
+  };
 
   const loginDemo = () => { setMember(demoMember); setLodge(demoLodge); setMembership(demoMembership); };
 
@@ -123,7 +144,7 @@ export function AppProvider({ children }: PropsWithChildren) {
   };
 
   const logout = () => {
-    setMember(null); setLodge(null); setMembership(null); setFavorites([]);
+    setMember(null); setLodge(null); setMembership(null); setFavorites([]); remoteIds.current.clear();
     if (supabase) void supabase.auth.signOut();
   };
 
@@ -160,38 +181,68 @@ export function AppProvider({ children }: PropsWithChildren) {
   const updateLodgeMemberRole: AppContextValue['updateLodgeMemberRole'] = (memberId, role) => setLodgeMembers((current) => current.map((item) => item.id === memberId ? { ...item, role } : item));
 
   const createAnnouncement: AppContextValue['createAnnouncement'] = (form) => {
-    const announcement: Announcement = { ...form, id: `announcement-${Date.now()}`, lodgeId: lodge?.id ?? demoLodge.id, createdAt: new Date().toISOString() };
-    setAnnouncements((current) => [announcement, ...current]); return announcement;
+    const lodgeId = lodge?.id ?? demoLodge.id;
+    const announcement: Announcement = { ...form, id: `announcement-${Date.now()}`, lodgeId, createdAt: new Date().toISOString() };
+    setAnnouncements((current) => [announcement, ...current]);
+    persistQuietly(persistAnnouncement(lodgeId, form));
+    return announcement;
   };
 
   const createLodgeEvent: AppContextValue['createLodgeEvent'] = (form) => {
-    const event: LodgeEvent = { ...form, id: `event-${Date.now()}`, lodgeId: lodge?.id ?? demoLodge.id, attendeeIds: [] };
-    setLodgeEvents((current) => [event, ...current]); return event;
+    const lodgeId = lodge?.id ?? demoLodge.id;
+    const event: LodgeEvent = { ...form, id: `event-${Date.now()}`, lodgeId, attendeeIds: [] };
+    setLodgeEvents((current) => [event, ...current]);
+    persistQuietly(persistLodgeEvent(lodgeId, form).then((remote) => rememberRemoteId(event.id, remote?.id)));
+    return event;
   };
 
   const toggleEventAttendance: AppContextValue['toggleEventAttendance'] = (eventId) => {
     if (!member) return;
+    const currentEvent = lodgeEvents.find((event) => event.id === eventId);
+    const attending = !currentEvent?.attendeeIds.includes(member.id);
     setLodgeEvents((current) => current.map((event) => event.id !== eventId ? event : { ...event, attendeeIds: event.attendeeIds.includes(member.id) ? event.attendeeIds.filter((id) => id !== member.id) : [...event.attendeeIds, member.id] }));
+    persistQuietly(persistEventAttendance(remoteIds.current.get(eventId) ?? eventId, attending));
   };
 
   const createPoll: AppContextValue['createPoll'] = (question, optionLabels, closesAt) => {
     const id = `poll-${Date.now()}`;
-    const poll: Poll = { id, lodgeId: lodge?.id ?? demoLodge.id, question, options: optionLabels.map((label, index) => ({ id: `${id}-${index}`, label, votes: 0 })), closesAt, active: true, totalVotes: 0 };
-    setPolls((current) => [poll, ...current]); return poll;
+    const lodgeId = lodge?.id ?? demoLodge.id;
+    const poll: Poll = { id, lodgeId, question, options: optionLabels.map((label, index) => ({ id: `${id}-${index}`, label, votes: 0 })), closesAt, active: true, totalVotes: 0 };
+    setPolls((current) => [poll, ...current]);
+    persistQuietly(persistPoll(lodgeId, question, optionLabels, closesAt).then((remoteId) => rememberRemoteId(id, remoteId)));
+    return poll;
   };
 
-  const votePoll: AppContextValue['votePoll'] = (pollId, optionId) => setPolls((current) => current.map((poll) => poll.id !== pollId ? poll : { ...poll, totalVotes: poll.totalVotes + 1, options: poll.options.map((option) => option.id === optionId ? { ...option, votes: option.votes + 1 } : option) }));
+  const votePoll: AppContextValue['votePoll'] = (pollId, optionId) => {
+    setPolls((current) => current.map((poll) => poll.id !== pollId ? poll : { ...poll, totalVotes: poll.totalVotes + 1, options: poll.options.map((option) => option.id === optionId ? { ...option, votes: option.votes + 1 } : option) }));
+    const remotePollId = remoteIds.current.get(pollId) ?? pollId;
+    const optionIndex = polls.find((poll) => poll.id === pollId)?.options.findIndex((option) => option.id === optionId) ?? -1;
+    if (optionIndex >= 0 && remotePollId !== pollId) {
+      // Newly created poll options receive server IDs, so remote voting is deferred until data is reloaded.
+      return;
+    }
+    persistQuietly(persistPollVote(remotePollId, optionId));
+  };
 
   const createFinancialEntry: AppContextValue['createFinancialEntry'] = (form) => {
-    const entry: FinancialEntry = { ...form, id: `financial-${Date.now()}`, lodgeId: lodge?.id ?? demoLodge.id, status: 'OPEN' };
-    setFinancialEntries((current) => [entry, ...current]); return entry;
+    const lodgeId = lodge?.id ?? demoLodge.id;
+    const entry: FinancialEntry = { ...form, id: `financial-${Date.now()}`, lodgeId, status: 'OPEN' };
+    setFinancialEntries((current) => [entry, ...current]);
+    persistQuietly(persistFinancialEntry(lodgeId, form).then((remoteId) => rememberRemoteId(entry.id, remoteId)));
+    return entry;
   };
 
-  const markFinancialEntryPaid: AppContextValue['markFinancialEntryPaid'] = (entryId) => setFinancialEntries((current) => current.map((entry) => entry.id === entryId ? { ...entry, status: 'PAID', paidAt: new Date().toISOString() } : entry));
+  const markFinancialEntryPaid: AppContextValue['markFinancialEntryPaid'] = (entryId) => {
+    setFinancialEntries((current) => current.map((entry) => entry.id === entryId ? { ...entry, status: 'PAID', paidAt: new Date().toISOString() } : entry));
+    persistQuietly(persistFinancialEntryPaid(remoteIds.current.get(entryId) ?? entryId));
+  };
 
   const createCharge: AppContextValue['createCharge'] = (form) => {
-    const charge: Charge = { ...form, id: `charge-${Date.now()}`, lodgeId: lodge?.id ?? demoLodge.id, status: 'DRAFT' };
-    setCharges((current) => [charge, ...current]); return charge;
+    const lodgeId = lodge?.id ?? demoLodge.id;
+    const charge: Charge = { ...form, id: `charge-${Date.now()}`, lodgeId, status: 'DRAFT' };
+    setCharges((current) => [charge, ...current]);
+    persistQuietly(persistCharge(lodgeId, form).then((remoteId) => rememberRemoteId(charge.id, remoteId)));
+    return charge;
   };
 
   const value: AppContextValue = { member, status: member?.status ?? 'GUEST', lodge, membership, lodgeMembers, managementRequests, announcements, lodgeEvents, polls, financialEntries, charges, listings, favorites, loginDemo, loginWithCredentials, registerPending, logout, toggleFavorite, createListing, submitManagementRequest, decideManagementRequest, addLodgeMember, updateLodgeMemberRole, createAnnouncement, createLodgeEvent, toggleEventAttendance, createPoll, votePoll, createFinancialEntry, markFinancialEntryPaid, createCharge };
