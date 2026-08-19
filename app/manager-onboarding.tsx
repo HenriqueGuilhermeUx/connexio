@@ -1,6 +1,7 @@
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { useApp } from '@/context/AppContext';
+import { persistManagementRequest, pickManagementEvidence, uploadManagementEvidence } from '@/lib/management';
 import { colors } from '@/theme/colors';
 import { LodgeRole } from '@/types';
 import { Feather } from '@expo/vector-icons';
@@ -14,6 +15,8 @@ const roles: Array<{ value: Extract<LodgeRole, 'SECRETARY' | 'TREASURER' | 'WORS
   { value: 'TREASURER', label: 'Tesoureiro' },
 ];
 
+type EvidenceAsset = { name: string; uri: string; mimeType?: string; size?: number };
+
 export default function ManagerOnboardingScreen() {
   const { member, managementRequests, submitManagementRequest } = useApp();
   const [lodgeName, setLodgeName] = useState(member?.lodge?.replace(/ nº .*/, '') ?? '');
@@ -21,37 +24,60 @@ export default function ManagerOnboardingScreen() {
   const [orient, setOrient] = useState(member?.city ?? '');
   const [region, setRegion] = useState(member?.region ?? '');
   const [role, setRole] = useState<Extract<LodgeRole, 'SECRETARY' | 'TREASURER' | 'WORSHIPFUL_MASTER'>>('WORSHIPFUL_MASTER');
-  const [evidenceName, setEvidenceName] = useState('');
+  const [evidence, setEvidence] = useState<EvidenceAsset | null>(null);
   const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const latest = useMemo(
     () => managementRequests.find((request) => request.requesterId === member?.id),
     [managementRequests, member?.id],
   );
 
-  const chooseEvidence = () => {
-    setEvidenceName('termo-de-posse-ou-nomeacao.pdf');
-    Alert.alert('Documento selecionado', 'No backend, este arquivo será enviado para armazenamento seguro e ficará disponível apenas para análise administrativa.');
+  const chooseEvidence = async () => {
+    try {
+      const asset = await pickManagementEvidence();
+      if (asset) setEvidence(asset);
+    } catch (error) {
+      Alert.alert('Não foi possível abrir o documento', error instanceof Error ? error.message : 'Tente novamente.');
+    }
   };
 
-  const submit = () => {
-    if (!lodgeName.trim() || !orient.trim() || !region.trim() || !evidenceName) {
+  const submit = async () => {
+    if (!lodgeName.trim() || !orient.trim() || !region.trim() || !evidence) {
       Alert.alert('Preencha os dados obrigatórios', 'Informe Loja, Oriente, região e anexe o documento de comprovação.');
       return;
     }
 
-    submitManagementRequest({
-      lodgeName: lodgeName.trim(),
-      lodgeNumber: lodgeNumber.trim() || undefined,
-      orient: orient.trim(),
-      region: region.trim(),
-      requestedRole: role,
-      evidenceName,
-      evidenceType: 'POSSESSION_TERM',
-      notes: notes.trim() || undefined,
-    });
-    Alert.alert('Solicitação enviada', 'Sua comprovação entrou na fila administrativa do Connexio.');
-    router.back();
+    setLoading(true);
+    try {
+      const upload = await uploadManagementEvidence(evidence);
+      const payload = {
+        lodgeName: lodgeName.trim(),
+        lodgeNumber: lodgeNumber.trim() || undefined,
+        orient: orient.trim(),
+        region: region.trim(),
+        requestedRole: role,
+        evidenceName: evidence.name,
+        evidencePath: upload.path,
+        evidenceType: 'POSSESSION_TERM' as const,
+        notes: notes.trim() || undefined,
+      };
+
+      submitManagementRequest(payload);
+      await persistManagementRequest(payload);
+
+      Alert.alert(
+        'Solicitação enviada',
+        upload.persisted
+          ? 'Documento enviado com segurança e solicitação registrada para análise administrativa.'
+          : 'Solicitação salva no modo protótipo. Quando o Supabase estiver conectado, o documento será persistido no backend.',
+      );
+      router.back();
+    } catch (error) {
+      Alert.alert('Erro ao enviar solicitação', error instanceof Error ? error.message : 'Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -92,10 +118,10 @@ export default function ManagerOnboardingScreen() {
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>Comprovação *</Text>
           <Pressable onPress={chooseEvidence} style={styles.uploadBox}>
-            <Feather name={evidenceName ? 'file-text' : 'upload-cloud'} size={22} color={colors.gold} />
+            <Feather name={evidence ? 'file-text' : 'upload-cloud'} size={22} color={colors.gold} />
             <View style={styles.uploadCopy}>
-              <Text style={styles.uploadTitle}>{evidenceName || 'Anexar termo de posse ou nomeação'}</Text>
-              <Text style={styles.uploadHint}>PDF ou imagem. Neste protótipo simulamos a seleção do arquivo.</Text>
+              <Text style={styles.uploadTitle}>{evidence?.name || 'Anexar termo de posse ou nomeação'}</Text>
+              <Text style={styles.uploadHint}>{evidence?.size ? `${Math.ceil(evidence.size / 1024)} KB · ` : ''}PDF ou imagem. Compatível com Android e Web.</Text>
             </View>
           </Pressable>
         </View>
@@ -106,8 +132,8 @@ export default function ManagerOnboardingScreen() {
         </View>
       </View>
 
-      <Button label="Enviar para análise" onPress={submit} />
-      <Button label="Cancelar" variant="secondary" onPress={() => router.back()} />
+      <Button label="Enviar para análise" loading={loading} onPress={submit} />
+      <Button label="Cancelar" variant="secondary" disabled={loading} onPress={() => router.back()} />
     </Screen>
   );
 }
