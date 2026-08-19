@@ -35,20 +35,16 @@ function download(url) {
 
 (async () => {
   for (const [encodedName, outputName] of files) {
-    const encodedPath = path.join(assets, encodedName);
-    const outputPath = path.join(assets, outputName);
-    let encoded;
-    if (fs.existsSync(encodedPath)) {
-      encoded = fs.readFileSync(encodedPath, 'utf8');
-    } else {
-      encoded = await download(`${sourceBase}/${encodedName}`);
-    }
+    // A branch de release pode conter cópias locais incompletas geradas por ferramentas.
+    // Para preservar exatamente o launcher já aprovado na Play, a fonte de verdade
+    // permanece a branch de assinatura/auditoria anterior.
+    const encoded = await download(`${sourceBase}/${encodedName}`);
     const png = Buffer.from(encoded.replace(/\s+/g, ''), 'base64');
     if (png.length < 1000 || png.subarray(1, 4).toString('ascii') !== 'PNG') {
       throw new Error(`Asset oficial inválido: ${outputName}`);
     }
-    fs.writeFileSync(outputPath, png);
-    console.log(`Asset preparado: ${outputName} (${png.length} bytes)`);
+    fs.writeFileSync(path.join(assets, outputName), png);
+    console.log(`Asset oficial preparado: ${outputName} (${png.length} bytes)`);
   }
 })().catch((error) => {
   console.error(error);
