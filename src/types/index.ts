@@ -85,6 +85,43 @@ export type ManagementRequest = {
   decidedAt?: string;
 };
 
+export type Announcement = {
+  id: string;
+  lodgeId: string;
+  title: string;
+  message: string;
+  priority: 'NORMAL' | 'IMPORTANT';
+  pushRequested: boolean;
+  createdAt: string;
+};
+
+export type LodgeEvent = {
+  id: string;
+  lodgeId: string;
+  title: string;
+  description?: string;
+  startsAt: string;
+  location?: string;
+  requiresRegistration: boolean;
+  attendeeIds: string[];
+};
+
+export type PollOption = {
+  id: string;
+  label: string;
+  votes: number;
+};
+
+export type Poll = {
+  id: string;
+  lodgeId: string;
+  question: string;
+  options: PollOption[];
+  closesAt?: string;
+  active: boolean;
+  totalVotes: number;
+};
+
 export type MemberCredential = {
   memberId: string;
   membershipId: string;
