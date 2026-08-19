@@ -37,77 +37,39 @@ jobs:
       - name: Load public Expo variables
         run: cp .env.example .env
 
-      - name: Prepare official Connexio image assets
+      - name: Prepare audited Connexio web icon
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode assets/connexio-app-icon.base64 > assets/connexio-app-icon.png
-          base64 --decode assets/connexio-adaptive-foreground.base64 > assets/connexio-adaptive-foreground.png
+          base64 --decode assets/connexio-web-icon.base64 > assets/connexio-web-icon.png
+          test -s assets/connexio-web-icon.png
+          file assets/connexio-web-icon.png | grep -q 'PNG image data'
+          ACTUAL_SHA256=$(sha256sum assets/connexio-web-icon.png | awk '{print $1}')
+          EXPECTED_SHA256=d6e61ed647f1da897ce0c24f0db46c3ce61babe6d8ad2aae16d136aa7ff305a3
+          echo "Web icon SHA256: $ACTUAL_SHA256"
+          if [ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]; then
+            echo "Ícone web inválido."
+            exit 1
+          fi
 
-          python3 - <<'PY'
-          from pathlib import Path
-          import struct
-          import zlib
-
-          PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
-
-          def repair_png(filename: str) -> None:
-              path = Path(filename)
-              data = bytearray(path.read_bytes())
-              if data[:8] != PNG_SIGNATURE:
-                  raise SystemExit(f'{filename}: assinatura PNG inválida')
-
-              pos = 8
-              idat_parts = []
-              saw_iend = False
-              while pos + 12 <= len(data):
-                  length = struct.unpack('>I', data[pos:pos + 4])[0]
-                  chunk_type = bytes(data[pos + 4:pos + 8])
-                  chunk_start = pos + 8
-                  chunk_end = chunk_start + length
-                  crc_end = chunk_end + 4
-                  if crc_end > len(data):
-                      raise SystemExit(f'{filename}: chunk PNG truncado')
-
-                  chunk_data = bytes(data[chunk_start:chunk_end])
-                  crc = zlib.crc32(chunk_type)
-                  crc = zlib.crc32(chunk_data, crc) & 0xffffffff
-                  data[chunk_end:crc_end] = struct.pack('>I', crc)
-
-                  if chunk_type == b'IDAT':
-                      idat_parts.append(chunk_data)
-                  if chunk_type == b'IEND':
-                      saw_iend = True
-                      pos = crc_end
-                      break
-                  pos = crc_end
-
-              if not saw_iend:
-                  raise SystemExit(f'{filename}: IEND ausente')
-              if not idat_parts:
-                  raise SystemExit(f'{filename}: IDAT ausente')
-
-              zlib.decompress(b''.join(idat_parts))
-              path.write_bytes(data)
-              print(f'{filename}: CRC reparado e payload PNG validado')
-
-          repair_png('assets/connexio-app-icon.png')
-          repair_png('assets/connexio-adaptive-foreground.png')
-          PY
-
-          file assets/connexio-app-icon.png
-          file assets/connexio-adaptive-foreground.png
-          test -s assets/connexio-app-icon.png
-          test -s assets/connexio-adaptive-foreground.png
-          file assets/connexio-app-icon.png | grep -q 'PNG image data'
-          file assets/connexio-adaptive-foreground.png | grep -q 'PNG image data'
-          echo "Official Connexio image assets prepared and validated."
-
-      - name: Configure GitHub Pages base path
+      - name: Configure GitHub Pages web export
         run: |
           node - <<'NODE'
           const fs = require('fs');
           const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+          const webIcon = './assets/connexio-web-icon.png';
+          app.expo.icon = webIcon;
+          app.expo.ios = { ...(app.expo.ios || {}), icon: webIcon };
+          app.expo.android = {
+            ...(app.expo.android || {}),
+            icon: webIcon,
+            adaptiveIcon: {
+              ...(app.expo.android?.adaptiveIcon || {}),
+              foregroundImage: webIcon,
+              monochromeImage: webIcon
+            }
+          };
+          app.expo.web = { ...(app.expo.web || {}), favicon: webIcon };
           app.expo.experiments = {
             ...(app.expo.experiments || {}),
             baseUrl: '/connexio'
