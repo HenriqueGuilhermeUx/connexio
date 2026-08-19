@@ -22,7 +22,9 @@ export function Screen({ children, scroll = true, contentStyle, scrollProps }: P
           {children}
         </ScrollView>
       ) : (
-        <View style={[styles.content, styles.flex, contentStyle]}>{children}</View>
+        <View style={styles.fixedShell}>
+          <View style={[styles.content, styles.flex, contentStyle]}>{children}</View>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -30,6 +32,13 @@ export function Screen({ children, scroll = true, contentStyle, scrollProps }: P
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  content: { paddingHorizontal: 20, paddingBottom: 32 },
+  content: {
+    width: '100%',
+    maxWidth: 1180,
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+  },
+  fixedShell: { flex: 1, width: '100%' },
   flex: { flex: 1 },
 });
