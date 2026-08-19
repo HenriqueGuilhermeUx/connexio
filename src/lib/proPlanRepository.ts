@@ -24,11 +24,7 @@ export async function loadLatestGestorProRequest(lodgeId: string) {
 
 export async function loadPendingGestorProRequests() {
   if (!supabase) return [];
-  const { data, error } = await supabase
-    .from('lodge_plan_requests')
-    .select('id,lodge_id,requested_by,status,created_at,lodges(name,number,orient,region,plan),member_profiles!lodge_plan_requests_requested_by_fkey(full_name,email)')
-    .eq('status', 'PENDING')
-    .order('created_at', { ascending: true });
+  const { data, error } = await supabase.from('lodge_plan_requests').select('id,lodge_id,requested_by,status,created_at,lodges(name,number,orient,region,plan)').eq('status', 'PENDING').order('created_at', { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
