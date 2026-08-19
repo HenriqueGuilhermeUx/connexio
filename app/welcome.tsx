@@ -1,5 +1,6 @@
 import { BrandMark } from '@/components/BrandMark';
 import { Button } from '@/components/Button';
+import { DeveloperCredit } from '@/components/DeveloperCredit';
 import { Screen } from '@/components/Screen';
 import { colors } from '@/theme/colors';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -8,8 +9,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 const benefits = [
   ['account-check-outline', 'Membros verificados'],
-  ['map-search-outline', 'Busca por cidade e região'],
-  ['whatsapp', 'Contato direto e sem intermediários'],
+  ['map-search-outline', 'Pesquisa simples por cidade e segmento'],
+  ['storefront-outline', 'Oferta fácil de produtos e serviços'],
 ] as const;
 
 export default function WelcomeScreen() {
@@ -21,7 +22,7 @@ export default function WelcomeScreen() {
           <Text style={styles.eyebrow}>REDE PRIVADA DE NEGÓCIOS</Text>
           <Text style={styles.title}>Encontre quem você já pode confiar.</Text>
           <Text style={styles.subtitle}>
-            Produtos, serviços e profissionais de membros verificados, próximos a você.
+            Pesquise oportunidades ou apresente o que você oferece. Tudo de forma simples.
           </Text>
         </View>
       </View>
@@ -38,9 +39,10 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.actions}>
-        <Button label="Entrar" onPress={() => router.push('/login')} />
-        <Button label="Solicitar acesso" variant="secondary" onPress={() => router.push('/register')} />
-        <Text style={styles.notice}>Acesso exclusivo mediante validação de vínculo.</Text>
+        <Button label="Conhecer o Connexio" onPress={() => router.push('/onboarding')} />
+        <Button label="Já tenho uma conta" variant="secondary" onPress={() => router.push('/login')} />
+        <Text style={styles.notice}>Acesso à rede completa e aos contatos após validação manual.</Text>
+        <DeveloperCredit />
       </View>
     </Screen>
   );

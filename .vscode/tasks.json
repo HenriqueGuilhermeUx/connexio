@@ -7,11 +7,7 @@
       "script": "web",
       "problemMatcher": [],
       "isBackground": true,
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": false
-      }
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": false }
     },
     {
       "label": "Connexio: iniciar no celular (Expo Go)",
@@ -19,22 +15,63 @@
       "script": "start:tunnel",
       "problemMatcher": [],
       "isBackground": true,
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": true
-      }
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true }
     },
     {
       "label": "Connexio: validar projeto",
       "type": "shell",
-      "command": "npm run typecheck && npm run lint",
+      "command": "npm run typecheck && npm run lint && CI=1 npx expo export --platform web",
       "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": false
-      }
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": false }
+    },
+    {
+      "label": "Expo: entrar na conta",
+      "type": "shell",
+      "command": "npx eas-cli@latest login",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true }
+    },
+    {
+      "label": "Expo: vincular projeto Connexio",
+      "type": "shell",
+      "command": "npx eas-cli@latest init",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true }
+    },
+    {
+      "label": "Expo: publicar piloto web",
+      "type": "shell",
+      "command": "npx eas-cli@latest env:pull --environment preview --path .env.local && CI=1 npx expo export --platform web && npx eas-cli@latest deploy --environment preview",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true }
+    },
+    {
+      "label": "Expo: publicar web em produção",
+      "type": "shell",
+      "command": "npx eas-cli@latest env:pull --environment production --path .env.local && CI=1 npx expo export --platform web && npx eas-cli@latest deploy --environment production --prod",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true }
+    },
+    {
+      "label": "Expo: gerar APK de teste",
+      "type": "shell",
+      "command": "npx eas-cli@latest build --platform android --profile preview",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true }
+    },
+    {
+      "label": "Expo: gerar Android para Play Store",
+      "type": "shell",
+      "command": "npx eas-cli@latest build --platform android --profile production",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true }
+    },
+    {
+      "label": "Expo: enviar Android para Play Store",
+      "type": "shell",
+      "command": "npx eas-cli@latest submit --platform android --profile production",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "focus": true }
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "name": "Connexio Expo",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-20-bookworm",
-  "postCreateCommand": "npm install",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "postCreateCommand": "cp -n .env.example .env && npm install",
   "forwardPorts": [8081, 19000, 19001, 19002],
   "portsAttributes": {
     "8081": {
@@ -31,7 +31,7 @@
     "codespaces": {
       "openFiles": [
         "README.md",
-        "app/welcome.tsx"
+        "docs/ACCESS_MODEL.md"
       ]
     }
   },

@@ -1,35 +1,42 @@
 import { EmptyState } from '@/components/EmptyState';
-import { ListingCard } from '@/components/ListingCard';
+import { LoadingState } from '@/components/LoadingState';
+import { OfferGrid } from '@/components/OfferGrid';
 import { Screen } from '@/components/Screen';
+import { ScreenTitle } from '@/components/ScreenTitle';
 import { useApp } from '@/context/AppContext';
-import { colors } from '@/theme/colors';
-import { StyleSheet, Text, View } from 'react-native';
+import { friendlyError } from '@/lib/errors';
+import { Alert, StyleSheet } from 'react-native';
 
 export default function FavoritesScreen() {
-  const { listings, favorites, toggleFavorite } = useApp();
-  const items = listings.filter((listing) => favorites.includes(listing.id));
+  const { listings, favorites, dataLoading, toggleFavorite } = useApp();
+  const items = listings.filter((listing) => listing.status === 'PUBLISHED' && favorites.includes(listing.id));
+
+  const remove = async (listingId: string) => {
+    try {
+      await toggleFavorite(listingId);
+    } catch (error) {
+      Alert.alert('Não foi possível atualizar', friendlyError(error));
+    }
+  };
 
   return (
     <Screen contentStyle={styles.content}>
-      <View style={styles.intro}>
-        <Text style={styles.eyebrow}>SUA CURADORIA</Text>
-        <Text style={styles.title}>Favoritos</Text>
-        <Text style={styles.subtitle}>Salve profissionais e ofertas para encontrar novamente com facilidade.</Text>
-      </View>
-      <View style={styles.list}>
-        {items.length ? items.map((listing) => (
-          <ListingCard key={listing.id} listing={listing} favorite onToggleFavorite={() => toggleFavorite(listing.id)} />
-        )) : <EmptyState title="Nenhum favorito ainda" description="Toque no coração de uma oferta para criar sua lista pessoal." />}
-      </View>
+      <ScreenTitle
+        eyebrow="SUA CURADORIA"
+        title="Favoritos"
+        subtitle="Salve profissionais e ofertas para encontrar novamente com facilidade."
+      />
+      {dataLoading && !listings.length ? (
+        <LoadingState label="Carregando favoritos..." />
+      ) : items.length ? (
+        <OfferGrid listings={items} favorites={favorites} onToggleFavorite={(id) => void remove(id)} />
+      ) : (
+        <EmptyState title="Nenhum favorito ainda" description="Toque no coração de uma oferta para criar sua lista pessoal." />
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   content: { paddingTop: 18, gap: 26 },
-  intro: { gap: 8 },
-  eyebrow: { color: colors.gold, fontSize: 12, fontWeight: '800', letterSpacing: 1.3 },
-  title: { color: colors.cream, fontSize: 30, fontWeight: '800' },
-  subtitle: { color: colors.textMuted, fontSize: 14, lineHeight: 21 },
-  list: { gap: 16 },
 });
