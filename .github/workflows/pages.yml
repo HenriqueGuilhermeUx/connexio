@@ -37,6 +37,20 @@ jobs:
       - name: Load public Expo variables
         run: cp .env.example .env
 
+      - name: Prepare official Connexio image assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode assets/connexio-app-icon.base64 > assets/connexio-app-icon.png
+          base64 --decode assets/connexio-adaptive-foreground.base64 > assets/connexio-adaptive-foreground.png
+          file assets/connexio-app-icon.png
+          file assets/connexio-adaptive-foreground.png
+          test -s assets/connexio-app-icon.png
+          test -s assets/connexio-adaptive-foreground.png
+          file assets/connexio-app-icon.png | grep -q 'PNG image data'
+          file assets/connexio-adaptive-foreground.png | grep -q 'PNG image data'
+          echo "Official Connexio image assets prepared."
+
       - name: Configure GitHub Pages base path
         run: |
           node - <<'NODE'
