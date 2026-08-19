@@ -85,7 +85,7 @@ export default function ManagerScreen() {
           <Feather name="mic" size={19} color={colors.gold} />
           <Text style={styles.voiceText}>Em breve: lançamentos, consultas e lembretes por voz para Secretário e Tesoureiro.</Text>
         </View>
-        <Button label="Conhecer o Gestor Pro" onPress={() => {}} />
+        <Button label="Abrir Gestor Pro" disabled={!canManage} onPress={() => router.push('/manager-pro')} />
       </View>
 
       <Button label="Voltar" variant="secondary" onPress={() => router.back()} />
