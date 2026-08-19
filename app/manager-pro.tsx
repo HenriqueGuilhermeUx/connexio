@@ -2,7 +2,7 @@ import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { useApp } from '@/context/AppContext';
 import { loadLatestGestorProRequest, requestGestorPro } from '@/lib/proPlanRepository';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { colors } from '@/theme/colors';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -26,32 +26,31 @@ const modules = [
 export default function ManagerProScreen(){
   const{lodge,membership}=useApp();
   const[request,setRequest]=useState<any>(null);
+  const[livePlan,setLivePlan]=useState<'FREE'|'PRO'|null>(null);
   const[requesting,setRequesting]=useState(false);
   const[feedback,setFeedback]=useState<{type:'success'|'error';text:string}|null>(null);
   const canManage=membership?.role==='WORSHIPFUL_MASTER'||membership?.role==='SECRETARY'||membership?.role==='TREASURER';
-  const proActive=!isSupabaseConfigured||lodge?.plan==='PRO';
+  const effectivePlan=livePlan??lodge?.plan??'FREE';
+  const proActive=!isSupabaseConfigured||effectivePlan==='PRO';
 
   useEffect(()=>{
-    if(!lodge||!isSupabaseConfigured)return;
-    void loadLatestGestorProRequest(lodge.id)
-      .then(setRequest)
-      .catch((error)=>setFeedback({type:'error',text:`Não foi possível consultar a ativação Pro: ${error instanceof Error?error.message:'Tente novamente.'}`}));
+    if(!lodge||!isSupabaseConfigured||!supabase)return;
+    void Promise.all([
+      loadLatestGestorProRequest(lodge.id),
+      supabase.from('lodges').select('plan').eq('id',lodge.id).single(),
+    ]).then(([latest,planResult])=>{
+      setRequest(latest);
+      if(planResult.error) throw planResult.error;
+      setLivePlan(planResult.data?.plan==='PRO'?'PRO':'FREE');
+    }).catch((error)=>setFeedback({type:'error',text:`Não foi possível consultar a ativação Pro: ${error instanceof Error?error.message:'Tente novamente.'}`}));
   },[lodge?.id,lodge?.plan]);
 
   const askPro=async()=>{
     if(!lodge)return;
-    setRequesting(true);
-    setFeedback(null);
-    try{
-      const row=await requestGestorPro(lodge.id);
-      if(!row) throw new Error('A solicitação não retornou confirmação do backend.');
-      setRequest(row);
-      setFeedback({type:'success',text:'Solicitação Gestor Pro enviada. Ela já está na fila do Admin Connexio para ativação do plano de R$ 49,90/mês por Loja.'});
-    }catch(error){
-      setFeedback({type:'error',text:`Não foi possível solicitar o Gestor Pro: ${error instanceof Error?error.message:'Tente novamente.'}`});
-    }finally{
-      setRequesting(false);
-    }
+    setRequesting(true);setFeedback(null);
+    try{const row=await requestGestorPro(lodge.id);if(!row)throw new Error('A solicitação não retornou confirmação do backend.');setRequest(row);setFeedback({type:'success',text:'Solicitação Gestor Pro enviada. Ela já está na fila do Admin Connexio para ativação.'});}
+    catch(error){setFeedback({type:'error',text:`Não foi possível solicitar o Gestor Pro: ${error instanceof Error?error.message:'Tente novamente.'}`});}
+    finally{setRequesting(false);}
   };
 
   return <Screen contentStyle={styles.content}>
