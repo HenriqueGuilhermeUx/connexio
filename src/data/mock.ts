@@ -1,4 +1,4 @@
-import { Listing, Member } from '@/types';
+import { Listing, Lodge, Membership, Member } from '@/types';
 
 export const demoMember: Member = {
   id: 'member-demo',
@@ -10,6 +10,26 @@ export const demoMember: Member = {
   lodge: 'ARLS Fraternidade nº 123',
   cimMasked: '•••• 4821',
   status: 'APPROVED',
+};
+
+export const demoLodge: Lodge = {
+  id: 'lodge-fraternidade-123',
+  name: 'ARLS Fraternidade',
+  number: '123',
+  orient: 'Santos',
+  region: 'Baixada Santista',
+  plan: 'FREE',
+  verified: true,
+};
+
+export const demoMembership: Membership = {
+  id: 'membership-demo',
+  memberId: demoMember.id,
+  lodgeId: demoLodge.id,
+  role: 'WORSHIPFUL_MASTER',
+  status: 'ACTIVE',
+  joinedAt: '2022-08-20T00:00:00.000Z',
+  verifiedAt: '2026-08-01T12:00:00.000Z',
 };
 
 export const categories = [
@@ -27,77 +47,23 @@ export const categories = [
 
 export const initialListings: Listing[] = [
   {
-    id: 'adv-001',
-    ownerId: 'member-ana',
-    ownerName: 'Ana Ribeiro',
-    ownerLodge: 'ARLS Luz do Litoral nº 218',
-    ownerVerified: true,
-    type: 'SERVICE',
-    title: 'Assessoria jurídica empresarial',
-    description:
-      'Consultoria preventiva, contratos e apoio jurídico para pequenas e médias empresas, com atendimento presencial e remoto.',
-    category: 'Advocacia',
-    city: 'Santos',
-    region: 'Baixada Santista',
-    priceType: 'ON_REQUEST',
-    benefit: 'Primeira consulta sem custo para membros',
-    phone: '5513991112233',
-    createdAt: '2026-07-18T12:00:00.000Z',
-    featured: true,
+    id: 'adv-001', ownerId: 'member-ana', ownerName: 'Ana Ribeiro', ownerLodge: 'ARLS Luz do Litoral nº 218', ownerVerified: true,
+    type: 'SERVICE', title: 'Assessoria jurídica empresarial', description: 'Consultoria preventiva, contratos e apoio jurídico para pequenas e médias empresas, com atendimento presencial e remoto.',
+    category: 'Advocacia', city: 'Santos', region: 'Baixada Santista', priceType: 'ON_REQUEST', benefit: 'Primeira consulta sem custo para membros', phone: '5513991112233', createdAt: '2026-07-18T12:00:00.000Z', featured: true,
   },
   {
-    id: 'eng-001',
-    ownerId: 'member-carlos',
-    ownerName: 'Carlos Menezes',
-    ownerLodge: 'ARLS União Paulista nº 402',
-    ownerVerified: true,
-    type: 'SERVICE',
-    title: 'Laudos e projetos de engenharia',
-    description:
-      'Projetos residenciais, laudos técnicos, regularização de imóveis e acompanhamento de obras em toda a Grande São Paulo.',
-    category: 'Engenharia',
-    city: 'São Paulo',
-    region: 'Grande São Paulo',
-    price: 850,
-    priceType: 'FROM',
-    benefit: '10% de desconto para membros verificados',
-    phone: '5511992223344',
-    createdAt: '2026-07-17T15:00:00.000Z',
+    id: 'eng-001', ownerId: 'member-carlos', ownerName: 'Carlos Menezes', ownerLodge: 'ARLS União Paulista nº 402', ownerVerified: true,
+    type: 'SERVICE', title: 'Laudos e projetos de engenharia', description: 'Projetos residenciais, laudos técnicos, regularização de imóveis e acompanhamento de obras em toda a Grande São Paulo.',
+    category: 'Engenharia', city: 'São Paulo', region: 'Grande São Paulo', price: 850, priceType: 'FROM', benefit: '10% de desconto para membros verificados', phone: '5511992223344', createdAt: '2026-07-17T15:00:00.000Z',
   },
   {
-    id: 'tech-001',
-    ownerId: 'member-lucas',
-    ownerName: 'Lucas Almeida',
-    ownerLodge: 'ARLS Ciência e Trabalho nº 91',
-    ownerVerified: true,
-    type: 'SERVICE',
-    title: 'Automação com inteligência artificial',
-    description:
-      'Mapeamento e implantação de automações para atendimento, vendas, processos internos e análise de dados.',
-    category: 'Tecnologia',
-    city: 'Campinas',
-    region: 'Campinas e Região',
-    priceType: 'ON_REQUEST',
-    phone: '5519993334455',
-    createdAt: '2026-07-16T09:00:00.000Z',
+    id: 'tech-001', ownerId: 'member-lucas', ownerName: 'Lucas Almeida', ownerLodge: 'ARLS Ciência e Trabalho nº 91', ownerVerified: true,
+    type: 'SERVICE', title: 'Automação com inteligência artificial', description: 'Mapeamento e implantação de automações para atendimento, vendas, processos internos e análise de dados.',
+    category: 'Tecnologia', city: 'Campinas', region: 'Campinas e Região', priceType: 'ON_REQUEST', phone: '5519993334455', createdAt: '2026-07-16T09:00:00.000Z',
   },
   {
-    id: 'auto-001',
-    ownerId: 'member-roberto',
-    ownerName: 'Roberto Silva',
-    ownerLodge: 'ARLS Caminho Justo nº 315',
-    ownerVerified: true,
-    type: 'PRODUCT',
-    title: 'Pneus premium com instalação',
-    description:
-      'Linha completa de pneus nacionais e importados, alinhamento, balanceamento e revisão preventiva.',
-    category: 'Automotivo',
-    city: 'Ribeirão Preto',
-    region: 'Ribeirão Preto e Região',
-    price: 399,
-    priceType: 'FROM',
-    benefit: 'Alinhamento gratuito na compra de quatro pneus',
-    phone: '5516994445566',
-    createdAt: '2026-07-15T18:00:00.000Z',
+    id: 'auto-001', ownerId: 'member-roberto', ownerName: 'Roberto Silva', ownerLodge: 'ARLS Caminho Justo nº 315', ownerVerified: true,
+    type: 'PRODUCT', title: 'Pneus premium com instalação', description: 'Linha completa de pneus nacionais e importados, alinhamento, balanceamento e revisão preventiva.',
+    category: 'Automotivo', city: 'Ribeirão Preto', region: 'Ribeirão Preto e Região', price: 399, priceType: 'FROM', benefit: 'Alinhamento gratuito na compra de quatro pneus', phone: '5516994445566', createdAt: '2026-07-15T18:00:00.000Z',
   },
 ];
