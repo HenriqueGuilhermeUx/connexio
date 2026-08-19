@@ -9,7 +9,7 @@
 - Expo owner: `henrriquenexa`
 - EAS project: `cdcb129b-043c-4823-be6f-4e7dc0b7ddeb`
 - Último versionCode aprovado na Play antes desta versão: `5`
-- Próximo versionCode esperado: `6` (EAS remote + autoIncrement)
+- Próximo versionCode esperado: `6` (EAS remote + autoIncrement; confirmar no artifact/Play)
 - Certificado de upload SHA-1 esperado: `F7:6A:76:7A:3B:2E:C2:B1:B8:6E:C0:FE:0F:4C:66:0A:21:10:BC:A0`
 - Launcher extraído do AAB deve manter SHA-256: `2dead15b728e96074c7050b6c77932c0730a94d12f5db8a14ea0e61b087d8e24`
 
@@ -25,67 +25,66 @@ O workflow `.github/workflows/android-build.yml` bloqueia o AAB Play se package,
 
 ### Carteirinha digital
 - vínculo com Loja;
-- token de verificação opaco e revogável;
+- token opaco e revogável;
 - QR Code;
-- página web/app de validação sem expor e-mail, telefone ou CIM completo.
+- validação web/app sem expor e-mail, telefone ou CIM completo.
 
 ### Gestor Free
-- membros e cargos;
-- convites por e-mail;
-- comunicados;
-- push para membros da Loja;
-- agenda e eventos;
-- participantes;
+- membros/cargos e convites;
+- comunicados e push;
+- agenda/eventos;
 - votações simples;
 - sessões e frequência;
 - check-in pela câmera usando QR da carteirinha.
 
 ### Gestor Pro — R$ 49,90/mês por Loja
-- Hoje na Loja com geração automática de ações;
-- Semáforo da Loja;
-- acompanhamento fraternal dos membros;
-- desenvolvimento de lideranças;
-- candidatos e sindicâncias estruturadas;
-- educação e trilhas de formação;
-- planejamento anual, metas e projetos;
-- atas estruturadas;
+- solicitação de ativação pela Loja e decisão no Admin Connexio;
+- entitlement protegido também por RLS no backend;
+- Hoje na Loja com ações automáticas;
+- Semáforo;
+- acompanhamento fraternal e liderança;
+- candidatos/sindicâncias;
+- educação/formação;
+- planejamento, metas e projetos;
+- atas;
 - transição de gestão;
-- cobranças e mensalidades;
-- contas a pagar e receber;
-- baixas e recorrências;
-- obrigações e vencimentos;
-- documentos/comprovantes privados;
-- arquitetura preparada para comandos por voz.
+- cobranças/mensalidades;
+- tesouraria, baixas e recorrências;
+- obrigações/vencimentos;
+- documentos privados;
+- arquitetura para futura gestão por voz.
 
 ## Antes de gerar o AAB final
 
-1. Aplicar no Supabase, em ordem, todas as migrations novas de `20260819170000` até `20260819214500`.
+1. Aplicar no Supabase todas as migrations de `20260819170000` até `20260819221000`, em ordem cronológica.
 2. Implantar a Edge Function `send-lodge-push`.
-3. Confirmar que o usuário fundador continua em `connexio_admins` após a migration de ponte.
-4. Testar login real, aprovação de membro e aprovação de gestor.
-5. Testar upload e abertura temporária da comprovação do gestor.
-6. Testar criação de Loja e vínculo/cargo.
-7. Testar carteirinha e validação do QR.
-8. Testar câmera de presença em um dispositivo Android real.
-9. Testar comunicado com push em um development/release build; push remoto não deve ser validado apenas no Expo Go.
-10. Testar Free: membros, comunicado, agenda/evento, votação simples e sessão/frequência.
-11. Testar Pro: Hoje, Semáforo, acompanhamento, candidato, educação, planejamento, ata, transição, tesouraria, cobrança e obrigação.
-12. Publicar a Web no Netlify e definir `EXPO_PUBLIC_APP_URL` com a URL final.
-13. Revalidar CI TypeScript + export Web.
-14. Executar o workflow Android com `build_type=play-store` na branch candidata.
-15. Confirmar no `release-audit.txt`: `Result: PASS`.
-16. Confirmar no Google Play Console que o AAB foi aceito com versionCode `6` ou superior e com o certificado de upload esperado.
+3. Confirmar o Admin fundador após a migration de ponte.
+4. Testar login, aprovação de membro e aprovação de gestor.
+5. Testar comprovação do gestor via storage/URL assinada.
+6. Testar Loja, cargo e credencial.
+7. Testar QR e validação.
+8. Testar câmera de frequência em Android real.
+9. Testar push em development/release build Android.
+10. Testar Gestor Free integralmente.
+11. Confirmar que uma Loja FREE não acessa módulos Pro nem diretamente pela API.
+12. Solicitar Gestor Pro, aprovar em `/admin-pro` e confirmar `lodges.plan = PRO`.
+13. Testar todos os módulos Pro/SOL.
+14. Publicar Web no Netlify e definir `EXPO_PUBLIC_APP_URL`.
+15. Revalidar CI (release identity + TypeScript + export Web).
+16. Executar workflow Android com `build_type=play-store`.
+17. Confirmar `release-audit.txt` com `Result: PASS`.
+18. Confirmar no Google Play Console o versionCode `6` ou superior e o certificado de upload esperado.
 
 ## Notas da versão para Google Play — pt-BR
 
-> O Connexio evoluiu para apoiar também a rotina das Lojas. Esta versão adiciona carteirinha digital com QR verificável, gestão de membros, comunicados, agenda, votações simples, sessões e frequência, além do novo Connexio Gestor com ferramentas para planejamento, acompanhamento, tesouraria, cobranças, obrigações, atas, formação e continuidade administrativa.
+> O Connexio evoluiu para apoiar também a rotina das Lojas. Esta versão adiciona carteirinha digital com QR verificável, gestão de membros, comunicados, agenda, votações simples, sessões e frequência, além do novo Connexio Gestor com ferramentas para planejamento, acompanhamento, formação, tesouraria, cobranças, obrigações, atas e continuidade administrativa.
 
-## O que permanece fora desta release
+## Fora desta release
 
 - votação formal/eleitoral;
 - processo disciplinar formal;
-- cobrança Pix automática com provedor financeiro real;
-- cobrança automática da assinatura Pro dentro do aplicativo;
+- Pix automático com provedor financeiro real;
+- cobrança recorrente automática da assinatura Pro dentro do app;
 - execução por voz em produção.
 
-Esses itens exigem regras, integrações ou decisões comerciais adicionais e não devem ser apresentados como ativos na 0.4.0.
+O Pro 0.4.0 usa solicitação e ativação administrativa inicial; não apresentar como assinatura automática integrada.
