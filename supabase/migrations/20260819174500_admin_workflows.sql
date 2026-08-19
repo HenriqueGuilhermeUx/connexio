@@ -45,7 +45,7 @@ as $$
 declare
   req public.management_requests%rowtype;
   resolved_lodge uuid;
-  membership_id uuid;
+  resolved_membership_id uuid;
 begin
   if not public.is_connexio_admin() then
     raise exception 'not authorized';
@@ -86,24 +86,25 @@ begin
       set role = excluded.role,
           status = 'ACTIVE',
           verified_at = now()
-    returning id into membership_id;
+    returning id into resolved_membership_id;
 
     insert into public.member_credentials (member_id, membership_id, lodge_id, version, status)
-    values (req.requester_id, membership_id, resolved_lodge, 1, 'ACTIVE')
-    on conflict (membership_id, version) do update set status = 'ACTIVE', revoked_at = null;
+    values (req.requester_id, resolved_membership_id, resolved_lodge, 1, 'ACTIVE')
+    on conflict (membership_id, version) do update
+      set status = 'ACTIVE', revoked_at = null;
   end if;
 
-  update public.management_requests
+  update public.management_requests mr
   set status = case when approved then 'APPROVED' else 'REJECTED' end,
-      lodge_id = case when approved then resolved_lodge else lodge_id end,
+      lodge_id = case when approved then resolved_lodge else mr.lodge_id end,
       decided_at = now(),
       decided_by = auth.uid(),
       notes = case
-        when reason is null or btrim(reason) = '' then notes
-        when notes is null or btrim(notes) = '' then 'Admin: ' || reason
-        else notes || E'\nAdmin: ' || reason
+        when reason is null or btrim(reason) = '' then mr.notes
+        when mr.notes is null or btrim(mr.notes) = '' then 'Admin: ' || reason
+        else mr.notes || E'\nAdmin: ' || reason
       end
-  where id = target_request;
+  where mr.id = target_request;
 
   insert into public.lodge_audit_log (lodge_id, actor_id, action, entity_type, entity_id, metadata)
   values (
