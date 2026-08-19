@@ -1,9 +1,9 @@
 import { useApp } from '@/context/AppContext';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { colors } from '@/theme/colors';
 import { Feather } from '@expo/vector-icons';
 import { router, usePathname } from 'expo-router';
-import { PropsWithChildren } from 'react';
+import { PropsWithChildren, useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, ScrollViewProps, StyleSheet, Text, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,26 +14,29 @@ const managerRoutes = [
   { label:'Membros',icon:'users' as const,route:'/lodge-members' as const,pro:false },
   { label:'Sessões',icon:'calendar' as const,route:'/manager-sessions' as const,pro:false },
   { label:'Comunicados',icon:'bell' as const,route:'/manager-communications' as const,pro:false },
+  { label:'Publicar',icon:'send' as const,route:'/manager-publish' as const,pro:false },
   { label:'Agenda',icon:'briefcase' as const,route:'/manager-agenda' as const,pro:false },
   { label:'Votações',icon:'check-square' as const,route:'/manager-voting' as const,pro:false },
   { label:'Gestor Pro',icon:'layers' as const,route:'/manager-pro' as const,pro:false },
+  { label:'Voz',icon:'mic' as const,route:'/manager-voice' as const,pro:true },
   { label:'Hoje na Loja',icon:'activity' as const,route:'/manager-today' as const,pro:true },
   { label:'Semáforo',icon:'pie-chart' as const,route:'/manager-health' as const,pro:true },
   { label:'Acompanhamento',icon:'heart' as const,route:'/manager-people' as const,pro:true },
   { label:'Candidatos',icon:'user-plus' as const,route:'/manager-candidates' as const,pro:true },
   { label:'Educação',icon:'book-open' as const,route:'/manager-education' as const,pro:true },
+  { label:'Documentos',icon:'folder' as const,route:'/manager-documents' as const,pro:true },
   { label:'Planejamento',icon:'target' as const,route:'/manager-planning' as const,pro:true },
   { label:'Atas',icon:'file-text' as const,route:'/manager-minutes' as const,pro:true },
   { label:'Transição',icon:'repeat' as const,route:'/manager-transition' as const,pro:true },
   { label:'Tesouraria',icon:'dollar-sign' as const,route:'/manager-finance' as const,pro:true },
-  { label:'Cobranças',icon:'credit-card' as const,route:'/manager-charges' as const,pro:true },
+  { label:'Cobranças Pix',icon:'credit-card' as const,route:'/manager-charges' as const,pro:true },
   { label:'Obrigações',icon:'clock' as const,route:'/manager-obligations' as const,pro:true },
 ];
 
 function fallbackRoute(pathname: string) {
   if (pathname === '/admin-pro') return '/admin';
   if (pathname === '/admin') return '/profile';
-  if (pathname === '/management-request' || pathname === '/member-card') return '/profile';
+  if (pathname === '/management-request' || pathname === '/member-card' || pathname === '/lodge-hub') return '/profile';
   if (pathname === '/lodge-members') return '/manager';
   if (pathname === '/manager') return '/profile';
   if (pathname.startsWith('/manager-')) return '/manager';
@@ -44,10 +47,18 @@ export function Screen({ children, scroll = true, contentStyle, scrollProps }: P
   const pathname = usePathname();
   const { lodge } = useApp();
   const { width } = useWindowDimensions();
+  const [livePlan,setLivePlan]=useState<'FREE'|'PRO'|null>(null);
   const managerArea = pathname === '/manager' || pathname === '/lodge-members' || pathname.startsWith('/manager-');
   const desktopManager = Platform.OS === 'web' && width >= 960 && managerArea;
-  const proActive = !isSupabaseConfigured || lodge?.plan === 'PRO';
+  const proActive = !isSupabaseConfigured || (livePlan ?? lodge?.plan) === 'PRO';
   const fallback = fallbackRoute(pathname);
+
+  useEffect(()=>{
+    if(!lodge||!isSupabaseConfigured||!supabase){setLivePlan(null);return;}
+    void supabase.from('lodges').select('plan').eq('id',lodge.id).single().then(({data,error})=>{
+      if(!error)setLivePlan(data?.plan==='PRO'?'PRO':'FREE');
+    });
+  },[lodge?.id,lodge?.plan,pathname]);
 
   const goBack = () => {
     try {
