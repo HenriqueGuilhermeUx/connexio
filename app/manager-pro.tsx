@@ -10,22 +10,30 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-const modules = [
-  { icon:'mic' as const,title:'Falar com o Connexio',description:'Execute tarefas de gestão por comando, com confirmação antes de gravar',route:'/manager-voice' as const,featured:true },
-  { icon:'activity' as const,title:'Hoje na Loja',description:'Ações geradas por cobranças, prazos, sessões, pessoas e projetos',route:'/manager-today' as const },
-  { icon:'pie-chart' as const,title:'Semáforo da Loja',description:'Saúde operacional e indicadores para o Venerável',route:'/manager-health' as const },
-  { icon:'heart' as const,title:'Acompanhamento',description:'Proximidade, graus e desenvolvimento de lideranças',route:'/manager-people' as const },
-  { icon:'user-plus' as const,title:'Candidatos',description:'Observação, entrevista, sindicância e checklist',route:'/manager-candidates' as const },
-  { icon:'book-open' as const,title:'Educação',description:'Trilhas, materiais e progresso de Aprendizes, Companheiros, Mestres e líderes',route:'/manager-education' as const },
-  { icon:'folder' as const,title:'Documentos da Loja',description:'Posse, atas, Constituição, Regimento, circulares e arquivos compartilhados',route:'/manager-documents' as const },
-  { icon:'send' as const,title:'Publicar para a Loja',description:'Sessões, atas, planejamento, educação e documentos no Mural dos membros',route:'/manager-publish' as const },
-  { icon:'target' as const,title:'Planejamento',description:'Objetivos, metas e projetos anuais',route:'/manager-planning' as const },
-  { icon:'file-text' as const,title:'Atas inteligentes',description:'Fatos, deliberações e pendências estruturadas',route:'/manager-minutes' as const },
-  { icon:'repeat' as const,title:'Transição de gestão',description:'Memória, documentos, acessos, patrimônio e pendências',route:'/manager-transition' as const },
-  { icon:'credit-card' as const,title:'Cobranças Pix',description:'Mensalidades e cobranças reais via Woovi da própria Loja',route:'/manager-charges' as const },
-  { icon:'dollar-sign' as const,title:'Tesouraria',description:'Contas a pagar e receber, baixas e comprovantes',route:'/manager-finance' as const },
-  { icon:'clock' as const,title:'Obrigações',description:'Prazos, recorrências, responsáveis e alertas',route:'/manager-obligations' as const },
-] as const;
+type ProModule = {
+  icon: keyof typeof Feather.glyphMap;
+  title: string;
+  description: string;
+  route: string;
+  featured?: boolean;
+};
+
+const modules: ProModule[] = [
+  { icon:'mic',title:'Falar com o Connexio',description:'Execute tarefas de gestão por comando, com confirmação antes de gravar',route:'/manager-voice',featured:true },
+  { icon:'activity',title:'Hoje na Loja',description:'Ações geradas por cobranças, prazos, sessões, pessoas e projetos',route:'/manager-today' },
+  { icon:'pie-chart',title:'Semáforo da Loja',description:'Saúde operacional e indicadores para o Venerável',route:'/manager-health' },
+  { icon:'heart',title:'Acompanhamento',description:'Proximidade, graus e desenvolvimento de lideranças',route:'/manager-people' },
+  { icon:'user-plus',title:'Candidatos',description:'Observação, entrevista, sindicância e checklist',route:'/manager-candidates' },
+  { icon:'book-open',title:'Educação',description:'Trilhas, materiais e progresso de Aprendizes, Companheiros, Mestres e líderes',route:'/manager-education' },
+  { icon:'folder',title:'Documentos da Loja',description:'Posse, atas, Constituição, Regimento, circulares e arquivos compartilhados',route:'/manager-documents' },
+  { icon:'send',title:'Publicar para a Loja',description:'Sessões, atas, planejamento, educação e documentos no Mural dos membros',route:'/manager-publish' },
+  { icon:'target',title:'Planejamento',description:'Objetivos, metas e projetos anuais',route:'/manager-planning' },
+  { icon:'file-text',title:'Atas inteligentes',description:'Fatos, deliberações e pendências estruturadas',route:'/manager-minutes' },
+  { icon:'repeat',title:'Transição de gestão',description:'Memória, documentos, acessos, patrimônio e pendências',route:'/manager-transition' },
+  { icon:'credit-card',title:'Cobranças Pix',description:'Mensalidades e cobranças reais via Woovi da própria Loja',route:'/manager-charges' },
+  { icon:'dollar-sign',title:'Tesouraria',description:'Contas a pagar e receber, baixas e comprovantes',route:'/manager-finance' },
+  { icon:'clock',title:'Obrigações',description:'Prazos, recorrências, responsáveis e alertas',route:'/manager-obligations' },
+];
 
 export default function ManagerProScreen(){
   const{lodge,membership}=useApp();
@@ -87,7 +95,7 @@ export default function ManagerProScreen(){
 
     {proActive?<Pressable onPress={()=>router.push('/manager-voice')} style={({pressed})=>[styles.voiceHero,pressed&&styles.pressed]}><View style={styles.voiceHeroIcon}><Feather name="mic" size={30} color={colors.background}/></View><View style={styles.voiceCopy}><Text style={styles.voiceHeroEyebrow}>GESTÃO POR VOZ</Text><Text style={styles.voiceHeroTitle}>Fale. Confira. Confirme.</Text><Text style={styles.voiceHeroText}>“Crie uma obrigação para renovar o certificado dia 30.” · “Gere a mensalidade dos irmãos.” · “Publique o comunicado da sessão.”</Text></View><Feather name="arrow-right" size={22} color={colors.gold}/></Pressable>:null}
 
-    <View style={styles.grid}>{modules.map((module)=><Pressable key={module.title} disabled={!canManage||!proActive} onPress={()=>router.push(module.route)} style={({pressed})=>[styles.moduleCard,module.featured&&styles.moduleFeatured,(!canManage||!proActive)&&styles.disabled,pressed&&styles.pressed]}><View style={styles.moduleIcon}><Feather name={module.icon} size={21} color={colors.gold}/></View><Text style={styles.moduleTitle}>{module.title}</Text><Text style={styles.moduleDescription}>{module.description}</Text><Text style={styles.open}>{proActive?'Abrir →':'Pro'}</Text></Pressable>)}</View>
+    <View style={styles.grid}>{modules.map((module)=><Pressable key={module.title} disabled={!canManage||!proActive} onPress={()=>router.push(module.route as never)} style={({pressed})=>[styles.moduleCard,module.featured&&styles.moduleFeatured,(!canManage||!proActive)&&styles.disabled,pressed&&styles.pressed]}><View style={styles.moduleIcon}><Feather name={module.icon} size={21} color={colors.gold}/></View><Text style={styles.moduleTitle}>{module.title}</Text><Text style={styles.moduleDescription}>{module.description}</Text><Text style={styles.open}>{proActive?'Abrir →':'Pro'}</Text></Pressable>)}</View>
     <View style={styles.note}><Feather name="shield" size={17} color={colors.gold}/><Text style={styles.noteText}>Dados financeiros, candidatos, notas de acompanhamento, documentos e transição são protegidos por permissões de gestão no backend.</Text></View>
   </Screen>;
 }
