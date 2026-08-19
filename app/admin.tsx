@@ -1,59 +1,119 @@
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { useApp } from '@/context/AppContext';
+import {
+  AdminMemberRequest,
+  decideManagerRemote,
+  decideMemberRemote,
+  getManagerEvidenceUrl,
+  loadAdminQueues,
+} from '@/lib/adminRepository';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { colors } from '@/theme/colors';
-import { LodgeRole } from '@/types';
+import { LodgeRole, ManagementRequest } from '@/types';
 import { Feather } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
-const memberSeed = [
+const memberSeed: AdminMemberRequest[] = [
   { id: '1', name: 'Marcos Oliveira', email: 'marcos@email.com', cim: '•••• 1274', lodge: 'ARLS Harmonia nº 88', city: 'São Paulo' },
   { id: '2', name: 'Eduardo Santos', email: 'eduardo@email.com', cim: '•••• 9031', lodge: 'ARLS Estrela do Mar nº 204', city: 'Guarujá' },
 ];
 
 export default function AdminScreen() {
-  const [memberRequests, setMemberRequests] = useState(memberSeed);
-  const { managementRequests, decideManagementRequest } = useApp();
-  const pendingManagement = managementRequests.filter((item) => item.status === 'PENDING');
-  const totalPending = memberRequests.length + pendingManagement.length;
+  const { managementRequests: localManagement, decideManagementRequest } = useApp();
+  const [memberRequests, setMemberRequests] = useState<AdminMemberRequest[]>(isSupabaseConfigured ? [] : memberSeed);
+  const [managerRequests, setManagerRequests] = useState<ManagementRequest[]>(
+    isSupabaseConfigured ? [] : localManagement.filter((item) => item.status === 'PENDING'),
+  );
+  const [loading, setLoading] = useState(isSupabaseConfigured);
 
-  const decideMember = (id: string, approved: boolean) => {
+  const refresh = async () => {
+    if (!isSupabaseConfigured) {
+      setManagerRequests(localManagement.filter((item) => item.status === 'PENDING'));
+      return;
+    }
+    setLoading(true);
+    try {
+      const queues = await loadAdminQueues();
+      if (queues) {
+        setMemberRequests(queues.members);
+        setManagerRequests(queues.managers);
+      }
+    } catch (error) {
+      Alert.alert('Não foi possível carregar o Admin', error instanceof Error ? error.message : 'Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const decideMember = async (id: string, approved: boolean) => {
     const request = memberRequests.find((item) => item.id === id);
-    setMemberRequests((current) => current.filter((item) => item.id !== id));
-    Alert.alert(approved ? 'Membro aprovado' : 'Solicitação rejeitada', request?.name ?? 'Cadastro atualizado');
+    try {
+      if (isSupabaseConfigured) await decideMemberRemote(id, approved);
+      setMemberRequests((current) => current.filter((item) => item.id !== id));
+      Alert.alert(approved ? 'Membro aprovado' : 'Solicitação rejeitada', request?.name ?? 'Cadastro atualizado');
+    } catch (error) {
+      Alert.alert('Não foi possível concluir', error instanceof Error ? error.message : 'Tente novamente.');
+    }
   };
 
-  const decideManager = (id: string, approved: boolean) => {
-    const request = managementRequests.find((item) => item.id === id);
-    decideManagementRequest(id, approved);
-    Alert.alert(
-      approved ? 'Gestor aprovado' : 'Acesso rejeitado',
-      approved ? `${request?.requesterName ?? 'Gestor'} foi autorizado a administrar ${request?.lodgeName ?? 'a Loja'}.` : 'A solicitação foi encerrada sem liberar acesso de gestão.',
-    );
+  const decideManager = async (id: string, approved: boolean) => {
+    const request = managerRequests.find((item) => item.id === id);
+    try {
+      if (isSupabaseConfigured) await decideManagerRemote(id, approved);
+      else decideManagementRequest(id, approved);
+      setManagerRequests((current) => current.filter((item) => item.id !== id));
+      Alert.alert(
+        approved ? 'Gestor aprovado' : 'Acesso rejeitado',
+        approved ? `${request?.requesterName ?? 'Gestor'} foi autorizado a administrar ${request?.lodgeName ?? 'a Loja'}.` : 'A solicitação foi encerrada sem liberar acesso de gestão.',
+      );
+    } catch (error) {
+      Alert.alert('Não foi possível concluir', error instanceof Error ? error.message : 'Tente novamente.');
+    }
   };
+
+  const openEvidence = async (request: ManagementRequest) => {
+    if (!request.evidencePath || !isSupabaseConfigured) {
+      Alert.alert('Comprovação', 'O arquivo está disponível apenas no modo conectado ao backend.');
+      return;
+    }
+    try {
+      const url = await getManagerEvidenceUrl(request.evidencePath);
+      if (url) await Linking.openURL(url);
+    } catch (error) {
+      Alert.alert('Não foi possível abrir o documento', error instanceof Error ? error.message : 'Tente novamente.');
+    }
+  };
+
+  const totalPending = memberRequests.length + managerRequests.length;
 
   return (
     <Screen contentStyle={styles.content}>
       <View style={styles.summary}>
         <View style={styles.summaryIcon}><Feather name="shield" size={25} color={colors.gold} /></View>
-        <View style={styles.summaryCopy}><Text style={styles.summaryValue}>{totalPending}</Text><Text style={styles.summaryLabel}>solicitações aguardando sua análise</Text></View>
+        <View style={styles.summaryCopy}><Text style={styles.summaryValue}>{loading ? '…' : totalPending}</Text><Text style={styles.summaryLabel}>solicitações aguardando sua análise</Text></View>
       </View>
 
       <View style={styles.ownerCard}>
         <Feather name="lock" size={18} color={colors.gold} />
         <View style={styles.ownerCopy}>
           <Text style={styles.ownerTitle}>Admin Connexio</Text>
-          <Text style={styles.ownerText}>Nesta fase, a aprovação administrativa permanece centralizada em você. O backend deverá registrar decisão, horário e evidência consultada.</Text>
+          <Text style={styles.ownerText}>{isSupabaseConfigured ? 'As decisões são registradas no backend com auditoria e permissões administrativas.' : 'Modo demo: decisões locais, sem persistência.'}</Text>
         </View>
       </View>
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Gestores de Loja</Text>
-          <Text style={styles.sectionCount}>{pendingManagement.length}</Text>
+          <Text style={styles.sectionCount}>{managerRequests.length}</Text>
         </View>
-        {pendingManagement.map((request) => (
+        {managerRequests.map((request) => (
           <View key={request.id} style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.avatar}><Text style={styles.avatarText}>{request.requesterName[0]}</Text></View>
@@ -70,17 +130,17 @@ export default function AdminScreen() {
               <Data label="Documento" value={request.evidenceName} />
               {request.notes ? <Data label="Observações" value={request.notes} /> : null}
             </View>
-            <View style={styles.evidenceNotice}>
+            <Pressable style={styles.evidenceNotice} onPress={() => void openEvidence(request)}>
               <Feather name="file-text" size={16} color={colors.gold} />
-              <Text style={styles.evidenceText}>No backend, toque aqui abrirá a comprovação armazenada com acesso restrito.</Text>
-            </View>
+              <Text style={styles.evidenceText}>{isSupabaseConfigured ? 'Abrir comprovação com acesso temporário e restrito.' : 'Documento simulado no modo demo.'}</Text>
+            </Pressable>
             <View style={styles.actions}>
-              <Button label="Rejeitar" variant="danger" style={styles.action} onPress={() => decideManager(request.id, false)} />
-              <Button label="Aprovar gestor" style={styles.action} onPress={() => decideManager(request.id, true)} />
+              <Button label="Rejeitar" variant="danger" style={styles.action} onPress={() => void decideManager(request.id, false)} />
+              <Button label="Aprovar gestor" style={styles.action} onPress={() => void decideManager(request.id, true)} />
             </View>
           </View>
         ))}
-        {!pendingManagement.length ? <Empty text="Nenhuma solicitação de gestor pendente." /> : null}
+        {!managerRequests.length && !loading ? <Empty text="Nenhuma solicitação de gestor pendente." /> : null}
       </View>
 
       <View style={styles.section}>
@@ -100,12 +160,12 @@ export default function AdminScreen() {
               <Data label="Cidade" value={request.city} />
             </View>
             <View style={styles.actions}>
-              <Button label="Rejeitar" variant="danger" style={styles.action} onPress={() => decideMember(request.id, false)} />
-              <Button label="Aprovar" style={styles.action} onPress={() => decideMember(request.id, true)} />
+              <Button label="Rejeitar" variant="danger" style={styles.action} onPress={() => void decideMember(request.id, false)} />
+              <Button label="Aprovar" style={styles.action} onPress={() => void decideMember(request.id, true)} />
             </View>
           </View>
         ))}
-        {!memberRequests.length ? <Empty text="Nenhuma solicitação de membro pendente." /> : null}
+        {!memberRequests.length && !loading ? <Empty text="Nenhuma solicitação de membro pendente." /> : null}
       </View>
     </Screen>
   );
