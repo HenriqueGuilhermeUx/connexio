@@ -5,6 +5,9 @@ export type LodgePlan = 'FREE' | 'PRO';
 export type LodgeRole = 'MEMBER' | 'SECRETARY' | 'TREASURER' | 'WORSHIPFUL_MASTER';
 export type MembershipStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING';
 export type ManagementRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type FinancialEntryType = 'PAYABLE' | 'RECEIVABLE';
+export type FinancialEntryStatus = 'OPEN' | 'PAID' | 'OVERDUE';
+export type ChargeStatus = 'DRAFT' | 'PENDING' | 'PAID' | 'CANCELLED';
 
 export type Listing = {
   id: string;
@@ -120,6 +123,32 @@ export type Poll = {
   closesAt?: string;
   active: boolean;
   totalVotes: number;
+};
+
+export type FinancialEntry = {
+  id: string;
+  lodgeId: string;
+  type: FinancialEntryType;
+  description: string;
+  category: string;
+  amount: number;
+  dueDate: string;
+  status: FinancialEntryStatus;
+  recurring: boolean;
+  attachmentName?: string;
+  paidAt?: string;
+};
+
+export type Charge = {
+  id: string;
+  lodgeId: string;
+  memberId?: string;
+  memberName: string;
+  description: string;
+  amount: number;
+  dueDate: string;
+  status: ChargeStatus;
+  pixReference?: string;
 };
 
 export type MemberCredential = {
