@@ -1,5 +1,5 @@
-import { demoMember, initialListings } from '@/data/mock';
-import { Listing, Member, MemberStatus } from '@/types';
+import { demoLodge, demoMember, demoMembership, initialListings } from '@/data/mock';
+import { Listing, Lodge, Membership, Member, MemberStatus } from '@/types';
 import React, { createContext, PropsWithChildren, useContext, useState } from 'react';
 
 type NewListing = Omit<
@@ -10,6 +10,8 @@ type NewListing = Omit<
 type AppContextValue = {
   member: Member | null;
   status: MemberStatus;
+  lodge: Lodge | null;
+  membership: Membership | null;
   listings: Listing[];
   favorites: string[];
   loginDemo: () => void;
@@ -71,9 +73,12 @@ export function AppProvider({ children }: PropsWithChildren) {
     return listing;
   };
 
+  const isDemoMember = member?.id === demoMember.id;
   const value: AppContextValue = {
     member,
     status: member?.status ?? 'GUEST',
+    lodge: isDemoMember ? demoLodge : null,
+    membership: isDemoMember ? demoMembership : null,
     listings,
     favorites,
     loginDemo,
