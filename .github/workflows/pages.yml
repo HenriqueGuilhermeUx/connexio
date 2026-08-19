@@ -43,13 +43,65 @@ jobs:
           set -euo pipefail
           base64 --decode assets/connexio-app-icon.base64 > assets/connexio-app-icon.png
           base64 --decode assets/connexio-adaptive-foreground.base64 > assets/connexio-adaptive-foreground.png
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import struct
+          import zlib
+
+          PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
+
+          def repair_png(filename: str) -> None:
+              path = Path(filename)
+              data = bytearray(path.read_bytes())
+              if data[:8] != PNG_SIGNATURE:
+                  raise SystemExit(f'{filename}: assinatura PNG inválida')
+
+              pos = 8
+              idat_parts = []
+              saw_iend = False
+              while pos + 12 <= len(data):
+                  length = struct.unpack('>I', data[pos:pos + 4])[0]
+                  chunk_type = bytes(data[pos + 4:pos + 8])
+                  chunk_start = pos + 8
+                  chunk_end = chunk_start + length
+                  crc_end = chunk_end + 4
+                  if crc_end > len(data):
+                      raise SystemExit(f'{filename}: chunk PNG truncado')
+
+                  chunk_data = bytes(data[chunk_start:chunk_end])
+                  crc = zlib.crc32(chunk_type)
+                  crc = zlib.crc32(chunk_data, crc) & 0xffffffff
+                  data[chunk_end:crc_end] = struct.pack('>I', crc)
+
+                  if chunk_type == b'IDAT':
+                      idat_parts.append(chunk_data)
+                  if chunk_type == b'IEND':
+                      saw_iend = True
+                      pos = crc_end
+                      break
+                  pos = crc_end
+
+              if not saw_iend:
+                  raise SystemExit(f'{filename}: IEND ausente')
+              if not idat_parts:
+                  raise SystemExit(f'{filename}: IDAT ausente')
+
+              zlib.decompress(b''.join(idat_parts))
+              path.write_bytes(data)
+              print(f'{filename}: CRC reparado e payload PNG validado')
+
+          repair_png('assets/connexio-app-icon.png')
+          repair_png('assets/connexio-adaptive-foreground.png')
+          PY
+
           file assets/connexio-app-icon.png
           file assets/connexio-adaptive-foreground.png
           test -s assets/connexio-app-icon.png
           test -s assets/connexio-adaptive-foreground.png
           file assets/connexio-app-icon.png | grep -q 'PNG image data'
           file assets/connexio-adaptive-foreground.png | grep -q 'PNG image data'
-          echo "Official Connexio image assets prepared."
+          echo "Official Connexio image assets prepared and validated."
 
       - name: Configure GitHub Pages base path
         run: |
