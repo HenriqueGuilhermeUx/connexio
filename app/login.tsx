@@ -2,23 +2,37 @@ import { Button } from '@/components/Button';
 import { FormField } from '@/components/FormField';
 import { Screen } from '@/components/Screen';
 import { useApp } from '@/context/AppContext';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import { colors } from '@/theme/colors';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 
 export default function LoginScreen() {
-  const { loginDemo } = useApp();
-  const [email, setEmail] = useState('henrique@connexio.app');
-  const [password, setPassword] = useState('connexio');
+  const { loginWithCredentials } = useApp();
+  const [email, setEmail] = useState(isSupabaseConfigured ? '' : 'henrique@connexio.app');
+  const [password, setPassword] = useState(isSupabaseConfigured ? '' : 'connexio');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert('Preencha seus dados', 'Informe e-mail e senha para continuar.');
       return;
     }
-    loginDemo();
-    router.replace('/(tabs)');
+
+    setLoading(true);
+    try {
+      const mode = await loginWithCredentials(email, password);
+      if (mode === 'REMOTE') {
+        router.replace('/(tabs)');
+        return;
+      }
+      router.replace('/(tabs)');
+    } catch (error) {
+      Alert.alert('Não foi possível entrar', error instanceof Error ? error.message : 'Confira e-mail e senha.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -30,11 +44,15 @@ export default function LoginScreen() {
       <View style={styles.form}>
         <FormField label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
         <FormField label="Senha" value={password} onChangeText={setPassword} secureTextEntry />
-        <Button label="Entrar no Connexio" onPress={handleLogin} />
+        <Button label="Entrar no Connexio" loading={loading} onPress={handleLogin} />
       </View>
       <View style={styles.demoBox}>
-        <Text style={styles.demoTitle}>Ambiente de demonstração</Text>
-        <Text style={styles.demoText}>Os campos já estão preenchidos. Nesta versão, qualquer senha válida abre o perfil aprovado de demonstração.</Text>
+        <Text style={styles.demoTitle}>{isSupabaseConfigured ? 'Acesso conectado' : 'Ambiente de demonstração'}</Text>
+        <Text style={styles.demoText}>
+          {isSupabaseConfigured
+            ? 'O login usa autenticação Supabase e carrega seu perfil, Loja e cargo quando disponíveis.'
+            : 'Sem credenciais Supabase configuradas, o Connexio mantém o perfil aprovado de demonstração para desenvolvimento.'}
+        </Text>
       </View>
     </Screen>
   );
