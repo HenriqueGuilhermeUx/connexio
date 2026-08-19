@@ -2,26 +2,41 @@
   "expo": {
     "name": "Connexio",
     "slug": "connexio",
-    "version": "0.1.0",
+    "owner": "henrriquenexa",
+    "version": "0.4.0",
     "orientation": "portrait",
     "scheme": "connexio",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "icon": "./assets/connexio-app-icon.png",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "br.com.connexio.app"
+      "bundleIdentifier": "br.com.alternativeventures.connexio",
+      "icon": "./assets/connexio-app-icon.png"
     },
     "android": {
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "br.com.connexio.app"
+      "package": "br.com.alternativeventures.connexio",
+      "icon": "./assets/connexio-app-icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/connexio-adaptive-foreground.png",
+        "backgroundColor": "#E4B64E",
+        "monochromeImage": "./assets/connexio-adaptive-foreground.png"
+      }
     },
     "web": {
-      "output": "static"
+      "output": "static",
+      "favicon": "./assets/connexio-app-icon.png"
     },
     "plugins": ["expo-router"],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "cdcb129b-043c-4823-be6f-4e7dc0b7ddeb"
+      }
     }
   }
 }
