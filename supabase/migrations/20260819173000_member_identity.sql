@@ -64,19 +64,33 @@ for each row execute function public.handle_connexio_signup();
 alter table public.member_profiles enable row level security;
 alter table public.member_verifications enable row level security;
 
+drop policy if exists "member reads own profile" on public.member_profiles;
 create policy "member reads own profile" on public.member_profiles for select
 using (id = auth.uid() or public.is_connexio_admin());
+
+drop policy if exists "member updates own profile" on public.member_profiles;
 create policy "member updates own profile" on public.member_profiles for update
 using (id = auth.uid()) with check (id = auth.uid());
+
+drop policy if exists "admin reviews profiles" on public.member_profiles;
 create policy "admin reviews profiles" on public.member_profiles for update
 using (public.is_connexio_admin()) with check (public.is_connexio_admin());
 
+drop policy if exists "member reads own verification" on public.member_verifications;
 create policy "member reads own verification" on public.member_verifications for select
 using (user_id = auth.uid() or public.is_connexio_admin());
+
+drop policy if exists "admin reviews verification" on public.member_verifications;
 create policy "admin reviews verification" on public.member_verifications for update
 using (public.is_connexio_admin()) with check (public.is_connexio_admin());
 
-create or replace view public.admin_member_queue
+-- O projeto histórico do Connexio já possui admin_member_queue com uma forma
+-- diferente. PostgreSQL não permite remover/reordenar colunas via CREATE OR
+-- REPLACE VIEW, por isso a view administrativa é recriada. Nenhuma tabela ou
+-- dado de membro é removido por este DROP VIEW.
+drop view if exists public.admin_member_queue;
+
+create view public.admin_member_queue
 with (security_invoker = true)
 as
 select
