@@ -17,40 +17,66 @@ grant execute on function public.can_use_lodge_pro(uuid) to authenticated;
 
 -- Finance / cobrança / obrigações.
 drop policy if exists "managers manage finance" on public.lodge_financial_entries;
+drop policy if exists "pro managers manage finance" on public.lodge_financial_entries;
 create policy "pro managers manage finance" on public.lodge_financial_entries for all using (public.can_use_lodge_pro(lodge_id)) with check (public.can_use_lodge_pro(lodge_id));
+
 drop policy if exists "managers manage charges" on public.lodge_charges;
+drop policy if exists "pro managers manage charges" on public.lodge_charges;
 create policy "pro managers manage charges" on public.lodge_charges for all using (public.can_use_lodge_pro(lodge_id)) with check (public.can_use_lodge_pro(lodge_id));
+
 drop policy if exists "managers manage obligations" on public.lodge_obligations;
+drop policy if exists "pro managers manage obligations" on public.lodge_obligations;
 create policy "pro managers manage obligations" on public.lodge_obligations for all using (public.can_use_lodge_pro(lodge_id)) with check (public.can_use_lodge_pro(lodge_id));
 
 -- SOL Pro: Hoje, atas e planejamento.
 drop policy if exists "managers manage tasks" on public.lodge_management_tasks;
+drop policy if exists "pro managers manage tasks" on public.lodge_management_tasks;
 create policy "pro managers manage tasks" on public.lodge_management_tasks for all using (public.can_use_lodge_pro(lodge_id)) with check (public.can_use_lodge_pro(lodge_id));
+
 drop policy if exists "managers manage minutes" on public.lodge_minutes;
+drop policy if exists "pro managers manage minutes" on public.lodge_minutes;
 create policy "pro managers manage minutes" on public.lodge_minutes for all using (public.can_use_lodge_pro(lodge_id)) with check (public.can_use_lodge_pro(lodge_id));
+
 drop policy if exists "managers manage plans" on public.lodge_annual_plans;
+drop policy if exists "pro managers manage plans" on public.lodge_annual_plans;
 create policy "pro managers manage plans" on public.lodge_annual_plans for all using (public.can_use_lodge_pro(lodge_id)) with check (public.can_use_lodge_pro(lodge_id));
+
 drop policy if exists "managers manage goals" on public.lodge_goals;
+drop policy if exists "pro managers manage goals" on public.lodge_goals;
 create policy "pro managers manage goals" on public.lodge_goals for all using (exists(select 1 from public.lodge_annual_plans p where p.id = plan_id and public.can_use_lodge_pro(p.lodge_id))) with check (exists(select 1 from public.lodge_annual_plans p where p.id = plan_id and public.can_use_lodge_pro(p.lodge_id)));
+
 drop policy if exists "managers manage projects" on public.lodge_projects;
+drop policy if exists "pro managers manage projects" on public.lodge_projects;
 create policy "pro managers manage projects" on public.lodge_projects for all using (exists(select 1 from public.lodge_annual_plans p where p.id = plan_id and public.can_use_lodge_pro(p.lodge_id))) with check (exists(select 1 from public.lodge_annual_plans p where p.id = plan_id and public.can_use_lodge_pro(p.lodge_id)));
 
 -- Pessoas / candidatos / educação / transição.
 drop policy if exists "managers manage member care" on public.lodge_member_care;
+drop policy if exists "pro managers manage member care" on public.lodge_member_care;
 create policy "pro managers manage member care" on public.lodge_member_care for all using (public.can_use_lodge_pro(lodge_id)) with check (public.can_use_lodge_pro(lodge_id));
+
 drop policy if exists "managers manage candidates" on public.lodge_candidates;
+drop policy if exists "pro managers manage candidates" on public.lodge_candidates;
 create policy "pro managers manage candidates" on public.lodge_candidates for all using (public.can_use_lodge_pro(lodge_id)) with check (public.can_use_lodge_pro(lodge_id));
+
 drop policy if exists "managers manage candidate checks" on public.lodge_candidate_checks;
+drop policy if exists "pro managers manage candidate checks" on public.lodge_candidate_checks;
 create policy "pro managers manage candidate checks" on public.lodge_candidate_checks for all using (exists(select 1 from public.lodge_candidates c where c.id = candidate_id and public.can_use_lodge_pro(c.lodge_id))) with check (exists(select 1 from public.lodge_candidates c where c.id = candidate_id and public.can_use_lodge_pro(c.lodge_id)));
+
 drop policy if exists "managers manage lodge learning" on public.lodge_learning_items;
+drop policy if exists "pro managers manage lodge learning" on public.lodge_learning_items;
 create policy "pro managers manage lodge learning" on public.lodge_learning_items for all using (public.can_use_lodge_pro(lodge_id)) with check (public.can_use_lodge_pro(lodge_id));
+
 drop policy if exists "managers manage learning progress" on public.lodge_learning_progress;
+drop policy if exists "pro managers manage learning progress" on public.lodge_learning_progress;
 create policy "pro managers manage learning progress" on public.lodge_learning_progress for all using (exists(select 1 from public.lodge_learning_items i where i.id = learning_item_id and public.can_use_lodge_pro(i.lodge_id))) with check (exists(select 1 from public.lodge_learning_items i where i.id = learning_item_id and public.can_use_lodge_pro(i.lodge_id)));
+
 drop policy if exists "managers manage handover" on public.lodge_handover_items;
+drop policy if exists "pro managers manage handover" on public.lodge_handover_items;
 create policy "pro managers manage handover" on public.lodge_handover_items for all using (public.can_use_lodge_pro(lodge_id)) with check (public.can_use_lodge_pro(lodge_id));
 
 -- Documentos financeiros também respeitam o plano Pro.
 drop policy if exists "manager finance document access" on storage.objects;
+drop policy if exists "pro manager finance document access" on storage.objects;
 create policy "pro manager finance document access" on storage.objects for all to authenticated
 using (bucket_id = 'lodge-finance-documents' and public.can_use_lodge_pro(((storage.foldername(name))[1])::uuid))
 with check (bucket_id = 'lodge-finance-documents' and public.can_use_lodge_pro(((storage.foldername(name))[1])::uuid));
