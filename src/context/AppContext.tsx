@@ -1,5 +1,6 @@
 import { demoLodge, demoMember, demoMembership, initialListings } from '@/data/mock';
 import { signInConnexio } from '@/lib/auth';
+import { hydrateLodgeData } from '@/lib/lodgeHydration';
 import {
   persistAnnouncement,
   persistCharge,
@@ -124,7 +125,27 @@ export function AppProvider({ children }: PropsWithChildren) {
     });
   };
 
-  const loginDemo = () => { setMember(demoMember); setLodge(demoLodge); setMembership(demoMembership); };
+  const clearLodgeState = () => {
+    setLodgeMembers([]);
+    setAnnouncements([]);
+    setLodgeEvents([]);
+    setPolls([]);
+    setFinancialEntries([]);
+    setCharges([]);
+    remoteIds.current.clear();
+  };
+
+  const loginDemo = () => {
+    setMember(demoMember);
+    setLodge(demoLodge);
+    setMembership(demoMembership);
+    setLodgeMembers(initialLodgeMembers);
+    setAnnouncements(initialAnnouncements);
+    setLodgeEvents(initialEvents);
+    setPolls(initialPolls);
+    setFinancialEntries(initialFinancialEntries);
+    setCharges(initialCharges);
+  };
 
   const loginWithCredentials: AppContextValue['loginWithCredentials'] = async (email, password) => {
     const authenticated = await signInConnexio(email, password);
@@ -132,19 +153,38 @@ export function AppProvider({ children }: PropsWithChildren) {
       loginDemo();
       return 'DEMO';
     }
+
     setMember(authenticated.member);
     setLodge(authenticated.lodge);
     setMembership(authenticated.membership);
+    clearLodgeState();
+
+    if (authenticated.lodge) {
+      try {
+        const hydrated = await hydrateLodgeData(authenticated.lodge.id);
+        if (hydrated) {
+          setLodgeMembers(hydrated.members);
+          setAnnouncements(hydrated.announcements);
+          setLodgeEvents(hydrated.events);
+          setPolls(hydrated.polls);
+          setFinancialEntries(hydrated.financialEntries);
+          setCharges(hydrated.charges);
+        }
+      } catch (error) {
+        if (__DEV__) console.warn('[Connexio hydration]', error);
+      }
+    }
+
     return 'REMOTE';
   };
 
   const registerPending: AppContextValue['registerPending'] = (form) => {
     setMember({ id: `member-${Date.now()}`, name: form.name, email: form.email, whatsapp: form.whatsapp, city: form.city, region: form.region, lodge: form.lodge, cimMasked: `•••• ${form.cim.slice(-4)}`, status: 'PENDING' });
-    setLodge(null); setMembership(null);
+    setLodge(null); setMembership(null); clearLodgeState();
   };
 
   const logout = () => {
-    setMember(null); setLodge(null); setMembership(null); setFavorites([]); remoteIds.current.clear();
+    setMember(null); setLodge(null); setMembership(null); setFavorites([]); clearLodgeState();
     if (supabase) void supabase.auth.signOut();
   };
 
@@ -217,10 +257,7 @@ export function AppProvider({ children }: PropsWithChildren) {
     setPolls((current) => current.map((poll) => poll.id !== pollId ? poll : { ...poll, totalVotes: poll.totalVotes + 1, options: poll.options.map((option) => option.id === optionId ? { ...option, votes: option.votes + 1 } : option) }));
     const remotePollId = remoteIds.current.get(pollId) ?? pollId;
     const optionIndex = polls.find((poll) => poll.id === pollId)?.options.findIndex((option) => option.id === optionId) ?? -1;
-    if (optionIndex >= 0 && remotePollId !== pollId) {
-      // Newly created poll options receive server IDs, so remote voting is deferred until data is reloaded.
-      return;
-    }
+    if (optionIndex >= 0 && remotePollId !== pollId) return;
     persistQuietly(persistPollVote(remotePollId, optionId));
   };
 
