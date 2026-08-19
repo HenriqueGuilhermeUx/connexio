@@ -8,8 +8,8 @@
     "start:tunnel": "npm run assets && expo start --tunnel",
     "android": "npm run assets && expo start --android",
     "ios": "npm run assets && expo start --ios",
-    "web": "npm run assets && expo start --web",
-    "build:web": "npm run assets && expo export --platform web",
+    "web": "node scripts/build-web.cjs",
+    "build:web": "node scripts/build-web.cjs",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "validate:release": "node scripts/validate-release.cjs"
