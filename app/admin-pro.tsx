@@ -7,6 +7,17 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
+function describeError(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object') {
+    const candidate = error as { message?: unknown; details?: unknown; code?: unknown };
+    const parts = [candidate.message, candidate.details, candidate.code ? `código ${candidate.code}` : null]
+      .filter((value): value is string => typeof value === 'string' && value.length > 0);
+    if (parts.length) return parts.join(' — ');
+  }
+  return 'Tente novamente.';
+}
+
 export default function AdminProScreen() {
   const [items, setItems] = useState<any[]>([]);
   const [note, setNote] = useState('');
@@ -18,8 +29,9 @@ export default function AdminProScreen() {
     setLoading(true);
     try {
       setItems(await loadPendingGestorProRequests());
+      setFeedback((current) => current?.type === 'success' ? current : null);
     } catch (error) {
-      setFeedback({type:'error',text:`Fila indisponível: ${error instanceof Error?error.message:'Tente novamente.'}`});
+      setFeedback({type:'error',text:`Fila indisponível: ${describeError(error)}`});
     } finally {
       setLoading(false);
     }
@@ -36,7 +48,7 @@ export default function AdminProScreen() {
       await reload();
       setFeedback({type:'success',text:approve?'Gestor Pro ativado. A Loja já pode usar os módulos Pro.':'Solicitação rejeitada. A Loja permanece no plano gratuito.'});
     } catch (error) {
-      setFeedback({type:'error',text:`Não foi possível decidir: ${error instanceof Error?error.message:'Tente novamente.'}`});
+      setFeedback({type:'error',text:`Não foi possível decidir: ${describeError(error)}`});
     } finally {
       setDecidingId(null);
     }
