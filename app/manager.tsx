@@ -8,9 +8,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 const freeFeatures = [
   ['users', 'Membros', 'Cadastros, vínculos e cargos', '/lodge-members'],
-  ['bell', 'Comunicados', 'Avisos e push para os membros', null],
-  ['calendar', 'Agenda e eventos', 'Datas, participantes e presença', null],
-  ['check-square', 'Votações', 'Enquetes e votações simples', null],
+  ['bell', 'Comunicados', 'Avisos e push para os membros', '/manager-communications'],
+  ['calendar', 'Agenda e eventos', 'Datas, participantes e presença', '/manager-agenda'],
+  ['check-square', 'Votações', 'Enquetes e votações simples', '/manager-voting'],
 ] as const;
 
 const proFeatures = [
@@ -60,7 +60,7 @@ export default function ManagerScreen() {
 
       <View style={styles.grid}>
         {freeFeatures.map(([icon, title, description, route]) => (
-          <FeatureCard key={title} icon={icon} title={title} description={description} disabled={!canManage} onPress={route && canManage ? () => router.push(route) : undefined} />
+          <FeatureCard key={title} icon={icon} title={title} description={description} disabled={!canManage} onPress={canManage ? () => router.push(route) : undefined} />
         ))}
       </View>
 
@@ -99,7 +99,7 @@ function FeatureCard({ icon, title, description, disabled, onPress }: { icon: ke
       <View style={styles.featureIcon}><Feather name={icon} size={20} color={colors.gold} /></View>
       <Text style={styles.featureTitle}>{title}</Text>
       <Text style={styles.featureText}>{description}</Text>
-      {onPress ? <Text style={styles.openText}>Abrir →</Text> : <Text style={styles.soonText}>Em construção</Text>}
+      {onPress ? <Text style={styles.openText}>Abrir →</Text> : <Text style={styles.soonText}>Acesso restrito</Text>}
     </Pressable>
   );
 }
