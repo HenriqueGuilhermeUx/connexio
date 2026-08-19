@@ -15,10 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
-const memberSeed: AdminMemberRequest[] = [
-  { id: '1', name: 'Marcos Oliveira', email: 'marcos@email.com', cim: '•••• 1274', lodge: 'ARLS Harmonia nº 88', city: 'São Paulo' },
-  { id: '2', name: 'Eduardo Santos', email: 'eduardo@email.com', cim: '•••• 9031', lodge: 'ARLS Estrela do Mar nº 204', city: 'Guarujá' },
-];
+const memberSeed: AdminMemberRequest[] = [];
 
 export default function AdminScreen() {
   const { managementRequests: localManagement, decideManagementRequest } = useApp();
@@ -27,6 +24,8 @@ export default function AdminScreen() {
     isSupabaseConfigured ? [] : localManagement.filter((item) => item.status === 'PENDING'),
   );
   const [loading, setLoading] = useState(isSupabaseConfigured);
+  const [decidingManagerId, setDecidingManagerId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
 
   const refresh = async () => {
     if (!isSupabaseConfigured) {
@@ -41,7 +40,8 @@ export default function AdminScreen() {
         setManagerRequests(queues.managers);
       }
     } catch (error) {
-      Alert.alert('Não foi possível carregar o Admin', error instanceof Error ? error.message : 'Tente novamente.');
+      const message = error instanceof Error ? error.message : 'Tente novamente.';
+      setFeedback({ kind: 'error', text: `Não foi possível carregar o Admin: ${message}` });
     } finally {
       setLoading(false);
     }
@@ -54,40 +54,57 @@ export default function AdminScreen() {
 
   const decideMember = async (id: string, approved: boolean) => {
     const request = memberRequests.find((item) => item.id === id);
+    setFeedback(null);
     try {
       if (isSupabaseConfigured) await decideMemberRemote(id, approved);
       setMemberRequests((current) => current.filter((item) => item.id !== id));
-      Alert.alert(approved ? 'Membro aprovado' : 'Solicitação rejeitada', request?.name ?? 'Cadastro atualizado');
+      setFeedback({ kind: 'success', text: approved ? `${request?.name ?? 'Membro'} aprovado.` : 'Solicitação de membro rejeitada.' });
     } catch (error) {
-      Alert.alert('Não foi possível concluir', error instanceof Error ? error.message : 'Tente novamente.');
+      const message = error instanceof Error ? error.message : 'Tente novamente.';
+      setFeedback({ kind: 'error', text: `Não foi possível concluir: ${message}` });
     }
   };
 
   const decideManager = async (id: string, approved: boolean) => {
     const request = managerRequests.find((item) => item.id === id);
+    setFeedback(null);
+    setDecidingManagerId(id);
     try {
-      if (isSupabaseConfigured) await decideManagerRemote(id, approved);
-      else decideManagementRequest(id, approved);
-      setManagerRequests((current) => current.filter((item) => item.id !== id));
-      Alert.alert(
-        approved ? 'Gestor aprovado' : 'Acesso rejeitado',
-        approved ? `${request?.requesterName ?? 'Gestor'} foi autorizado a administrar ${request?.lodgeName ?? 'a Loja'}.` : 'A solicitação foi encerrada sem liberar acesso de gestão.',
-      );
+      if (isSupabaseConfigured) {
+        await decideManagerRemote(id, approved);
+        await refresh();
+      } else {
+        decideManagementRequest(id, approved);
+        setManagerRequests((current) => current.filter((item) => item.id !== id));
+      }
+      setFeedback({
+        kind: 'success',
+        text: approved
+          ? `${request?.requesterName ?? 'Gestor'} foi autorizado a administrar ${request?.lodgeName ?? 'a Loja'}.`
+          : 'A solicitação foi rejeitada.',
+      });
     } catch (error) {
-      Alert.alert('Não foi possível concluir', error instanceof Error ? error.message : 'Tente novamente.');
+      const raw = error as { message?: string; details?: string; hint?: string; code?: string };
+      const parts = [raw?.message, raw?.details, raw?.hint, raw?.code ? `código ${raw.code}` : undefined].filter(Boolean);
+      const message = parts.length ? parts.join(' — ') : 'Tente novamente.';
+      setFeedback({ kind: 'error', text: `Não foi possível ${approved ? 'aprovar o gestor' : 'rejeitar a solicitação'}: ${message}` });
+      console.error('[Connexio admin decideManager]', error);
+    } finally {
+      setDecidingManagerId(null);
     }
   };
 
   const openEvidence = async (request: ManagementRequest) => {
     if (!request.evidencePath || !isSupabaseConfigured) {
-      Alert.alert('Comprovação', 'O arquivo está disponível apenas no modo conectado ao backend.');
+      setFeedback({ kind: 'error', text: 'O arquivo de comprovação está disponível apenas no modo conectado ao backend.' });
       return;
     }
     try {
       const url = await getManagerEvidenceUrl(request.evidencePath);
       if (url) await Linking.openURL(url);
     } catch (error) {
-      Alert.alert('Não foi possível abrir o documento', error instanceof Error ? error.message : 'Tente novamente.');
+      const message = error instanceof Error ? error.message : 'Tente novamente.';
+      setFeedback({ kind: 'error', text: `Não foi possível abrir o documento: ${message}` });
     }
   };
 
@@ -107,6 +124,13 @@ export default function AdminScreen() {
           <Text style={styles.ownerText}>{isSupabaseConfigured ? 'As decisões são registradas no backend com auditoria e permissões administrativas.' : 'Modo demo: decisões locais, sem persistência.'}</Text>
         </View>
       </View>
+
+      {feedback ? (
+        <View style={[styles.feedback, feedback.kind === 'error' ? styles.feedbackError : styles.feedbackSuccess]}>
+          <Feather name={feedback.kind === 'error' ? 'alert-triangle' : 'check-circle'} size={18} color={feedback.kind === 'error' ? colors.danger : colors.success} />
+          <Text style={styles.feedbackText}>{feedback.text}</Text>
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -135,8 +159,8 @@ export default function AdminScreen() {
               <Text style={styles.evidenceText}>{isSupabaseConfigured ? 'Abrir comprovação com acesso temporário e restrito.' : 'Documento simulado no modo demo.'}</Text>
             </Pressable>
             <View style={styles.actions}>
-              <Button label="Rejeitar" variant="danger" style={styles.action} onPress={() => void decideManager(request.id, false)} />
-              <Button label="Aprovar gestor" style={styles.action} onPress={() => void decideManager(request.id, true)} />
+              <Button label="Rejeitar" variant="danger" style={styles.action} disabled={decidingManagerId !== null} onPress={() => void decideManager(request.id, false)} />
+              <Button label="Aprovar gestor" style={styles.action} loading={decidingManagerId === request.id} disabled={decidingManagerId !== null && decidingManagerId !== request.id} onPress={() => void decideManager(request.id, true)} />
             </View>
           </View>
         ))}
@@ -197,6 +221,10 @@ const styles = StyleSheet.create({
   ownerCopy: { flex: 1, gap: 3 },
   ownerTitle: { color: colors.warning, fontSize: 12, fontWeight: '800' },
   ownerText: { color: colors.textMuted, fontSize: 11, lineHeight: 17 },
+  feedback: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14, borderRadius: 14, borderWidth: 1 },
+  feedbackError: { backgroundColor: 'rgba(245,141,141,0.10)', borderColor: colors.danger },
+  feedbackSuccess: { backgroundColor: 'rgba(90,190,140,0.10)', borderColor: colors.success },
+  feedbackText: { color: colors.text, fontSize: 12, lineHeight: 18, flex: 1 },
   section: { gap: 12 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '900' },
