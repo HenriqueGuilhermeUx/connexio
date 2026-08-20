@@ -102,11 +102,78 @@ export async function addProject(planId: string, title: string, dueDate?: string
   return data;
 }
 
-export async function saveMinutes(lodgeId: string, input: { meetingDate: string; sessionLabel: string; matters: string; decisions: string; pendingItems: string; closingNotes: string }) {
+export async function loadMinutes(lodgeId: string) {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from('lodge_minutes').select('*').eq('lodge_id', lodgeId).order('meeting_date', { ascending: false }).order('created_at', { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function saveMinutes(lodgeId: string, input: {
+  meetingDate: string;
+  sessionLabel: string;
+  matters: string;
+  decisions: string;
+  pendingItems: string;
+  closingNotes: string;
+  sessionId?: string | null;
+  location?: string;
+  transcript?: string;
+  generatedText?: string;
+  attendanceSnapshot?: unknown[];
+}) {
   if (!supabase) return null;
   const actor = await userId();
   if (!actor) return null;
-  const { data, error } = await supabase.from('lodge_minutes').insert({ lodge_id: lodgeId, meeting_date: input.meetingDate, session_label: input.sessionLabel, matters: input.matters, decisions: input.decisions, pending_items: input.pendingItems, closing_notes: input.closingNotes, created_by: actor }).select('*').single();
+  const { data, error } = await supabase.from('lodge_minutes').insert({
+    lodge_id: lodgeId,
+    meeting_date: input.meetingDate,
+    session_label: input.sessionLabel,
+    matters: input.matters,
+    decisions: input.decisions,
+    pending_items: input.pendingItems,
+    closing_notes: input.closingNotes,
+    session_id: input.sessionId ?? null,
+    location: input.location || null,
+    transcript: input.transcript || null,
+    generated_text: input.generatedText || null,
+    attendance_snapshot: input.attendanceSnapshot ?? [],
+    created_by: actor,
+  }).select('*').single();
   if (error) throw error;
   return data;
+}
+
+export async function updateMinutes(minutesId: string, input: Partial<{
+  matters: string;
+  decisions: string;
+  pending_items: string;
+  closing_notes: string;
+  transcript: string;
+  generated_text: string;
+  audience: string;
+}>) {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from('lodge_minutes').update({ ...input, updated_at: new Date().toISOString() }).eq('id', minutesId).select('*').single();
+  if (error) throw error;
+  return data;
+}
+
+export async function submitMinutesForReview(minutesId: string) {
+  if (!supabase) return;
+  const { error } = await supabase.rpc('submit_minutes_for_review', { target_minutes: minutesId });
+  if (error) throw error;
+}
+
+export async function approveMinutes(minutesId: string) {
+  if (!supabase) return;
+  const { error } = await supabase.rpc('approve_minutes', { target_minutes: minutesId });
+  if (error) throw error;
+}
+
+export async function publishMinutes(minutesId: string, audience = 'ALL') {
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc('publish_minutes', { target_minutes: minutesId, target_audience: audience });
+  if (error) throw error;
+  return data as string | null;
 }
