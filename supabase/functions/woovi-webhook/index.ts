@@ -1,47 +1,41 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
+  // Woovi validates the endpoint before allowing webhook registration.
+  // Health-checks must return HTTP 200 without touching payment state.
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    return new Response('ok', { status: 200 });
+  }
+
   try {
+    const rawBody = await req.text();
+
+    // Some provider validation probes arrive as an empty POST.
+    // It is safe to acknowledge them because there is no event to process.
+    if (!rawBody.trim()) return new Response('ok', { status: 200 });
+
+    let payload: any;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      // Non-JSON validation probes are acknowledged without processing.
+      return new Response('ok', { status: 200 });
+    }
+
     const expected = Deno.env.get('WOOVI_WEBHOOK_AUTH');
     const received = req.headers.get('authorization') ?? req.headers.get('Authorization');
     if (expected && received !== expected) return new Response('unauthorized', { status: 401 });
 
-    const payload = await req.json();
     const charge = payload?.charge ?? payload?.data?.charge ?? payload;
     const correlationID = charge?.correlationID ?? payload?.correlationID;
     const status = String(charge?.status ?? '').toUpperCase();
-    if (!correlationID) return new Response('missing correlationID', { status: 400 });
+
+    // A JSON validation payload without a real charge is also harmless.
+    if (!correlationID) return new Response('ok', { status: 200 });
 
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
     const completed = status === 'COMPLETED' || status === 'PAID';
     const expired = status === 'EXPIRED';
-
-    const { data: lodgeCharge } = await admin
-      .from('lodge_charges')
-      .select('id,lodge_id,status')
-      .eq('correlation_id', correlationID)
-      .maybeSingle();
-
-    if (lodgeCharge) {
-      const nextStatus = completed ? 'PAID' : expired ? 'EXPIRED' : 'PENDING';
-      const { error } = await admin.from('lodge_charges').update({
-        status: nextStatus,
-        paid_at: completed ? new Date().toISOString() : null,
-        provider_reference: charge?.identifier ?? charge?.globalID ?? charge?.transactionID ?? undefined,
-      }).eq('id', lodgeCharge.id);
-      if (error) throw error;
-
-      if (completed) {
-        await admin.from('lodge_audit_log').insert({
-          lodge_id: lodgeCharge.lodge_id,
-          action: 'WOOVI_CHARGE_PAID',
-          entity_type: 'LODGE_CHARGE',
-          entity_id: lodgeCharge.id,
-          metadata: { correlationID, transactionID: charge?.transactionID ?? null },
-        });
-      }
-      return new Response('ok', { status: 200 });
-    }
 
     const { data: proRequest } = await admin
       .from('lodge_plan_requests')
