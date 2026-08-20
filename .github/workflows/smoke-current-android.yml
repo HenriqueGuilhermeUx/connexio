@@ -45,18 +45,14 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: |
-            APK=$(find apk -name '*.apk' | head -n1)
             adb logcat -c
-            adb install -r "$APK"
+            adb install -r apk/Connexio-0.4.2-preview.apk
             adb shell monkey -p br.com.alternativeventures.connexio -c android.intent.category.LAUNCHER 1
             sleep 10
-            PID=$(adb shell pidof br.com.alternativeventures.connexio | tr -d '\r')
-            echo "PID=$PID"
+            adb shell pidof br.com.alternativeventures.connexio > /tmp/connexio-pid.txt || true
+            cat /tmp/connexio-pid.txt
             adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' || true
             echo '===== RELEVANT LOGCAT ====='
-            adb logcat -d | grep -E -i 'FATAL EXCEPTION|AndroidRuntime|ReactNativeJS|SoLoader|connexio|Expo|Hermes' | tail -n 400 || true
-            if [ -z "$PID" ]; then
-              echo 'CURRENT RELEASE CRASHED ON STARTUP'
-              exit 1
-            fi
+            adb logcat -d | grep -E -i 'FATAL EXCEPTION|AndroidRuntime|ReactNativeJS|SoLoader|connexio|Expo|Hermes' | tail -n 500 || true
+            test -s /tmp/connexio-pid.txt
             echo 'CURRENT RELEASE SURVIVED STARTUP'
