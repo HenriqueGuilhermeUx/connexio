@@ -29,6 +29,8 @@ jobs:
     timeout-minutes: 120
     env:
       RAW_EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_LOCAL_BUILD_SKIP_CLEANUP: "1"
+      EAS_LOCAL_BUILD_WORKINGDIR: /tmp/eas-local-build
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,6 +39,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: Normalize Expo token
         shell: bash
@@ -64,32 +72,22 @@ jobs:
       - name: Verify Expo account
         run: eas whoami
 
-      - name: Build APK preview
-        run: eas build --platform android --profile preview --non-interactive --wait --clear-cache --json > apk-build.json
-
-      - name: Download APK
+      - name: Build APK preview locally
         run: |
-          URL=$(node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('apk-build.json','utf8')); const b=Array.isArray(x)?x[0]:x; const u=b?.artifacts?.buildUrl||b?.artifacts?.applicationArchiveUrl||b?.artifactUrl; if(!u) process.exit(3); process.stdout.write(u)")
-          curl --fail --location "$URL" --output Connexio-0.4.0-preview.apk
+          rm -rf /tmp/eas-local-build
+          eas build --platform android --profile preview --local --non-interactive --output "$GITHUB_WORKSPACE/Connexio-0.4.0-preview.apk"
           test -s Connexio-0.4.0-preview.apk
 
-      - name: Build production AAB
-        run: eas build --platform android --profile production --non-interactive --wait --clear-cache --json > aab-build.json
-
-      - name: Download AAB
+      - name: Build production AAB locally
         run: |
-          URL=$(node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('aab-build.json','utf8')); const b=Array.isArray(x)?x[0]:x; const u=b?.artifacts?.buildUrl||b?.artifacts?.applicationArchiveUrl||b?.artifactUrl; if(!u) process.exit(3); process.stdout.write(u)")
-          curl --fail --location "$URL" --output Connexio-0.4.0-production.aab
+          rm -rf /tmp/eas-local-build
+          eas build --platform android --profile production --local --non-interactive --output "$GITHUB_WORKSPACE/Connexio-0.4.0-production.aab"
           test -s Connexio-0.4.0-production.aab
 
-      - name: Save build metadata
+      - name: Record checksums
         run: |
-          node - <<'NODE'
-          const fs=require('fs');
-          const apk=JSON.parse(fs.readFileSync('apk-build.json','utf8'));
-          const aab=JSON.parse(fs.readFileSync('aab-build.json','utf8'));
-          fs.writeFileSync('android-build-metadata.json', JSON.stringify({apk,aab,generatedAt:new Date().toISOString()}, null, 2));
-          NODE
+          sha256sum Connexio-0.4.0-preview.apk Connexio-0.4.0-production.aab > android-checksums.txt
+          ls -lh Connexio-0.4.0-preview.apk Connexio-0.4.0-production.aab
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -107,10 +105,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload build metadata
+      - name: Upload checksums
         uses: actions/upload-artifact@v4
         with:
-          name: Connexio-Android-Metadata
-          path: android-build-metadata.json
+          name: Connexio-Android-Checksums
+          path: android-checksums.txt
           if-no-files-found: error
           retention-days: 30
