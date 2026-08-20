@@ -75,40 +75,40 @@ jobs:
       - name: Build APK preview locally
         run: |
           rm -rf /tmp/eas-local-build
-          eas build --platform android --profile preview --local --non-interactive --output "$GITHUB_WORKSPACE/Connexio-0.4.0-preview.apk"
-          test -s Connexio-0.4.0-preview.apk
+          eas build --platform android --profile preview --local --non-interactive --output "$GITHUB_WORKSPACE/Connexio-0.4.1-preview.apk"
+          test -s Connexio-0.4.1-preview.apk
 
       - name: Build production AAB locally
         run: |
           rm -rf /tmp/eas-local-build
-          eas build --platform android --profile production --local --non-interactive --output "$GITHUB_WORKSPACE/Connexio-0.4.0-production.aab"
-          test -s Connexio-0.4.0-production.aab
+          eas build --platform android --profile production --local --non-interactive --output "$GITHUB_WORKSPACE/Connexio-0.4.1-production.aab"
+          test -s Connexio-0.4.1-production.aab
 
       - name: Record checksums
         run: |
-          sha256sum Connexio-0.4.0-preview.apk Connexio-0.4.0-production.aab > android-checksums.txt
-          ls -lh Connexio-0.4.0-preview.apk Connexio-0.4.0-production.aab
+          sha256sum Connexio-0.4.1-preview.apk Connexio-0.4.1-production.aab > android-checksums.txt
+          ls -lh Connexio-0.4.1-preview.apk Connexio-0.4.1-production.aab
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Connexio-APK
-          path: Connexio-0.4.0-preview.apk
+          name: Connexio-APK-0.4.1
+          path: Connexio-0.4.1-preview.apk
           if-no-files-found: error
           retention-days: 30
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Connexio-AAB
-          path: Connexio-0.4.0-production.aab
+          name: Connexio-AAB-0.4.1
+          path: Connexio-0.4.1-production.aab
           if-no-files-found: error
           retention-days: 30
 
       - name: Upload checksums
         uses: actions/upload-artifact@v4
         with:
-          name: Connexio-Android-Checksums
+          name: Connexio-Android-Checksums-0.4.1
           path: android-checksums.txt
           if-no-files-found: error
           retention-days: 30
