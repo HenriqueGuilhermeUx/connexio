@@ -1,7 +1,7 @@
 {
   "cli": {
     "version": ">= 16.0.0",
-    "appVersionSource": "remote"
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
@@ -28,7 +28,7 @@
       }
     },
     "production": {
-      "autoIncrement": true,
+      "autoIncrement": false,
       "environment": "production",
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://umgryjsxpvycrrcjtglm.supabase.co",
