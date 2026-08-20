@@ -3,11 +3,11 @@
     "name": "Connexio",
     "slug": "connexio",
     "owner": "henrriquenexa",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "orientation": "portrait",
     "scheme": "connexio",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "icon": "./assets/connexio-app-icon.png",
     "ios": {
       "supportsTablet": true,
@@ -15,7 +15,7 @@
       "icon": "./assets/connexio-app-icon.png"
     },
     "android": {
-      "versionCode": 13,
+      "versionCode": 14,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "br.com.alternativeventures.connexio",
@@ -37,13 +37,6 @@
         {
           "cameraPermission": "O Connexio usa a câmera para ler a carteirinha digital e registrar presença nas sessões.",
           "recordAudioAndroid": false
-        }
-      ],
-      [
-        "expo-audio",
-        {
-          "microphonePermission": "O Connexio usa o microfone quando você escolhe gravar uma ata ou executar comandos de gestão por voz.",
-          "recordAudioAndroid": true
         }
       ],
       [
