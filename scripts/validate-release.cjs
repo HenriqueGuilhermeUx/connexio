@@ -4,7 +4,7 @@ const path = require('path');
 const app = require('../app.json').expo;
 const pkg = require('../package.json');
 const expected = {
-  version: '0.4.0',
+  version: '0.4.1',
   package: 'br.com.alternativeventures.connexio',
   owner: 'henrriquenexa',
   projectId: 'cdcb129b-043c-4823-be6f-4e7dc0b7ddeb',
@@ -18,6 +18,7 @@ function assert(condition, message) {
 
 assert(app.version === expected.version, `Versão Expo esperada ${expected.version}, encontrada ${app.version}`);
 assert(pkg.version === expected.version, `Versão package.json esperada ${expected.version}, encontrada ${pkg.version}`);
+assert(app.android?.versionCode === 13, `Android versionCode esperado 13, encontrado ${app.android?.versionCode}`);
 assert(app.android?.package === expected.package, `Android package inválido: ${app.android?.package}`);
 assert(app.ios?.bundleIdentifier === expected.package, `iOS bundle inválido: ${app.ios?.bundleIdentifier}`);
 assert(app.owner === expected.owner, `Owner Expo inválido: ${app.owner}`);
@@ -32,5 +33,6 @@ for (const file of [expected.icon, expected.adaptive]) {
 
 console.log('Connexio release identity: PASS');
 console.log(`Version: ${app.version}`);
+console.log(`VersionCode: ${app.android.versionCode}`);
 console.log(`Package: ${app.android.package}`);
 console.log(`EAS project: ${app.extra.eas.projectId}`);
