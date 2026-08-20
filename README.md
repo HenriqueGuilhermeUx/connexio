@@ -1,84 +1,115 @@
 # Connexio
 
-**Confiança que gera negócios.**
+**Confiança que gera negócios. Gestão que fortalece a Loja.**
 
-Connexio é uma rede privada de negócios, produtos, serviços e benefícios entre membros verificados. O MVP valida o núcleo do produto: identificar membros, publicar ofertas, encontrar profissionais e gerar contatos diretos pelo WhatsApp.
+Connexio é uma rede privada para membros verificados, com marketplace de produtos/serviços e um Sistema Operacional da Loja (SOL) para apoiar Venerável, Secretário e Tesoureiro.
 
-## Estado atual
+## Release candidata
 
-Este repositório contém um protótipo funcional em Expo/React Native, sem backend, pronto para validação de experiência e fluxo.
+Versão atual desta branch: **0.4.0**.
 
-### Fluxos disponíveis
+### Rede do membro
 
-- boas-vindas e proposta de valor;
-- login de demonstração;
-- solicitação de acesso com status pendente;
+- autenticação e verificação;
 - feed de produtos e serviços;
-- busca por texto e categoria;
-- detalhe da oferta e contato pelo WhatsApp;
-- favoritos;
-- publicação local de oferta;
-- perfil verificado;
-- painel administrativo de aprovação, em modo demonstração.
+- busca, favoritos e contato;
+- publicação de ofertas;
+- carteirinha digital com QR verificável e revogável.
+
+### Gestor Free
+
+- membros e cargos;
+- comunicados e push;
+- agenda/eventos;
+- votações simples;
+- sessões e frequência;
+- check-in por câmera usando a carteirinha Connexio.
+
+### Gestor Pro — R$ 49,90/mês por Loja
+
+- Hoje na Loja com tarefas automáticas;
+- Semáforo da Loja;
+- acompanhamento dos irmãos e formação de lideranças;
+- candidatos e sindicâncias estruturadas;
+- educação e trilhas de formação;
+- planejamento anual, metas e projetos;
+- atas estruturadas;
+- transição de gestão;
+- cobranças/mensalidades;
+- tesouraria, contas a pagar/receber e baixas;
+- obrigações, vencimentos e documentos privados;
+- contratos de ação preparados para futura gestão por voz.
 
 ## Stack
 
 - Expo SDK 54;
-- React Native 0.81;
-- React 19;
+- React Native 0.81 / React 19;
 - Expo Router;
-- TypeScript estrito.
+- TypeScript;
+- Supabase Auth, Postgres, RLS, Storage e Edge Functions;
+- Expo Camera;
+- Expo Notifications;
+- Android + Web na mesma base;
+- Netlify para Web;
+- EAS/GitHub Actions para Android.
 
-> Em julho de 2026, durante a transição para o SDK 57, o template SDK 54 permanece indicado pela documentação do Expo para testes no Expo Go em dispositivo físico. A evolução para development build e SDK 57 está registrada no roadmap.
+## Segurança
 
-## Executar sem terminal — recomendado
+- CIM completo não é exposto publicamente;
+- QR usa token opaco e revogável;
+- documentos de gestão ficam em buckets privados;
+- URLs de documentos são temporárias;
+- RLS isola Lojas e papéis;
+- notas de acompanhamento e candidatos ficam restritos à gestão;
+- Admin Connexio é separado da administração das Lojas.
 
-O projeto possui um ambiente GitHub Codespaces configurado. Não é necessário instalar Node, Git, Expo CLI ou digitar comandos.
-
-1. Abra o repositório no GitHub e selecione a branch `agent/bootstrap-mvp`.
-2. Clique em **Code**.
-3. Abra a aba **Codespaces**.
-4. Clique em **Create codespace on agent/bootstrap-mvp**.
-5. Aguarde o VS Code abrir no navegador. A instalação das dependências acontece automaticamente.
-6. No menu superior do VS Code, clique em **Terminal > Run Task...**.
-7. Escolha uma das tarefas:
-   - **Connexio: abrir no navegador** — melhor opção para o primeiro teste;
-   - **Connexio: iniciar no celular (Expo Go)** — gera um QR code para escanear com o Expo Go;
-   - **Connexio: validar projeto** — verifica TypeScript e ESLint.
-
-Na opção web, o Codespaces encaminha a porta do aplicativo e abre a prévia automaticamente. Caso não abra, use a aba **Ports**, localize `Connexio Web` e clique no ícone de globo.
-
-Na opção Expo Go, mantenha o Codespace aberto enquanto usa o aplicativo. O modo túnel depende da disponibilidade do serviço de túnel do Expo/ngrok; se ele estiver indisponível, use a prévia web.
-
-## Executar localmente — alternativa técnica
+## Desenvolvimento
 
 ```bash
 npm install
-npx expo start --clear
+npm run start
 ```
 
-Abra o QR code com o Expo Go. No login de demonstração, os campos já aparecem preenchidos.
+O comando prepara os assets oficiais antes de iniciar o Expo.
 
-## Estrutura
+Validação da release:
 
-```text
-app/                 rotas e telas do Expo Router
-src/components/      componentes de interface
-src/context/         estado temporário do protótipo
-src/data/            dados de demonstração
-src/theme/           tokens visuais
-src/types/           contratos de domínio
-docs/                produto, arquitetura, dados e decisões
+```bash
+npm run assets
+npm run validate:release
+npm run typecheck
+npm run build:web
 ```
 
-## Princípios do MVP
+## Web / Netlify
 
-1. O produto começa como rede privada de negócios, não como e-commerce transacional.
-2. O evento de valor é um contato qualificado entre membros.
-3. CIM é dado de validação e nunca deve ser exposto publicamente.
-4. Pagamentos, chat interno, agenda e cupons avançados ficam fora do núcleo inicial.
-5. O backend futuro deve manter trilha de auditoria para toda decisão administrativa.
+`netlify.toml` já define:
 
-## Próximo marco
+- build: `npm run build:web`;
+- publish: `dist`;
+- fallback SPA para rotas do Expo Router.
 
-Conectar autenticação, persistência, moderação, armazenamento de imagens e métricas ao Supabase. Consulte [`docs/ROADMAP.md`](docs/ROADMAP.md).
+## Android / Google Play
+
+O workflow `.github/workflows/android-build.yml` gera APK de teste ou AAB Play Store e valida:
+
+- package `br.com.alternativeventures.connexio`;
+- versão 0.4.0;
+- chave de upload autorizada;
+- launcher aprovado;
+- TypeScript;
+- origem exata do código selecionado no workflow.
+
+Consulte [`docs/RELEASE_0.4.0.md`](docs/RELEASE_0.4.0.md) antes de gerar o AAB final.
+
+## Backend
+
+As migrations em `supabase/migrations/` evoluem o projeto Supabase histórico sem recriar usuários/Admin. Antes da publicação da 0.4.0, aplique as migrations novas em ordem e implante `supabase/functions/send-lodge-push`.
+
+## Fora do escopo desta release
+
+- votação formal/eleitoral;
+- processo disciplinar formal;
+- Pix automático com provedor financeiro;
+- assinatura Pro cobrada automaticamente dentro do app;
+- execução por voz em produção.
