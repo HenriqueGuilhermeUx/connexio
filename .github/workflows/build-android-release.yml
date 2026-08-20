@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      RAW_EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,12 +38,16 @@ jobs:
         with:
           node-version: 22
 
-      - name: Check Expo token
+      - name: Normalize Expo token
+        shell: bash
         run: |
-          if [ -z "$EXPO_TOKEN" ]; then
+          CLEAN_TOKEN=$(printf '%s' "$RAW_EXPO_TOKEN" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          if [ -z "$CLEAN_TOKEN" ]; then
             echo "EXPO_TOKEN is not configured in GitHub Actions secrets."
             exit 2
           fi
+          echo "::add-mask::$CLEAN_TOKEN"
+          echo "EXPO_TOKEN=$CLEAN_TOKEN" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
