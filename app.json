@@ -35,8 +35,14 @@
         "expo-camera",
         {
           "cameraPermission": "O Connexio usa a câmera para ler a carteirinha digital e registrar presença nas sessões.",
-          "microphonePermission": "O Connexio poderá usar o microfone apenas quando a gestão por voz estiver habilitada.",
           "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "O Connexio usa o microfone quando você escolhe gravar uma ata ou executar comandos de gestão por voz.",
+          "recordAudioAndroid": true
         }
       ],
       [
