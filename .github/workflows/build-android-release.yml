@@ -1,0 +1,100 @@
+name: Build Connexio Android APK + AAB
+
+on:
+  push:
+    branches:
+      - agent/connexio-gestor-foundation
+    paths:
+      - '.github/workflows/build-android-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check Expo token
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "EXPO_TOKEN is not configured in GitHub Actions secrets."
+            exit 2
+          fi
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Validate release
+        run: |
+          npm run assets
+          npm run validate:release
+          npm run typecheck
+
+      - name: Install EAS CLI
+        run: npm install --global eas-cli
+
+      - name: Verify Expo account
+        run: eas whoami
+
+      - name: Build APK preview
+        run: eas build --platform android --profile preview --non-interactive --wait --clear-cache --json > apk-build.json
+
+      - name: Download APK
+        run: |
+          URL=$(node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('apk-build.json','utf8')); const b=Array.isArray(x)?x[0]:x; const u=b?.artifacts?.buildUrl||b?.artifacts?.applicationArchiveUrl||b?.artifactUrl; if(!u) process.exit(3); process.stdout.write(u)")
+          curl --fail --location "$URL" --output Connexio-0.4.0-preview.apk
+          test -s Connexio-0.4.0-preview.apk
+
+      - name: Build production AAB
+        run: eas build --platform android --profile production --non-interactive --wait --clear-cache --json > aab-build.json
+
+      - name: Download AAB
+        run: |
+          URL=$(node -e "const fs=require('fs'); const x=JSON.parse(fs.readFileSync('aab-build.json','utf8')); const b=Array.isArray(x)?x[0]:x; const u=b?.artifacts?.buildUrl||b?.artifacts?.applicationArchiveUrl||b?.artifactUrl; if(!u) process.exit(3); process.stdout.write(u)")
+          curl --fail --location "$URL" --output Connexio-0.4.0-production.aab
+          test -s Connexio-0.4.0-production.aab
+
+      - name: Save build metadata
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const apk=JSON.parse(fs.readFileSync('apk-build.json','utf8'));
+          const aab=JSON.parse(fs.readFileSync('aab-build.json','utf8'));
+          fs.writeFileSync('android-build-metadata.json', JSON.stringify({apk,aab,generatedAt:new Date().toISOString()}, null, 2));
+          NODE
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Connexio-APK
+          path: Connexio-0.4.0-preview.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Connexio-AAB
+          path: Connexio-0.4.0-production.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload build metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: Connexio-Android-Metadata
+          path: android-build-metadata.json
+          if-no-files-found: error
+          retention-days: 30
