@@ -17,8 +17,7 @@
       "package": "br.com.connexio.app"
     },
     "web": {
-      "output": "static",
-      "favicon": "./public/connexio-icon.svg"
+      "output": "static"
     },
     "plugins": [
       "expo-router"
