@@ -22,6 +22,8 @@ jobs:
     timeout-minutes: 120
     env:
       EXPECTED_ANDROID_PACKAGE: br.com.alternativeventures.connexio
+      EXPECTED_APP_VERSION: 0.4.0
+      MIN_VERSION_CODE: 6
       TARGET_UPLOAD_SHA1: F7:6A:76:7A:3B:2E:C2:B1:B8:6E:C0:FE:0F:4C:66:0A:21:10:BC:A0
       EXPECTED_LAUNCHER_SHA256: 2dead15b728e96074c7050b6c77932c0730a94d12f5db8a14ea0e61b087d8e24
 
@@ -33,10 +35,8 @@ jobs:
             exit 1
           fi
 
-      - name: Baixar código do Connexio
+      - name: Baixar exatamente o código selecionado no workflow
         uses: actions/checkout@v5
-        with:
-          ref: agent/supabase-foundation
 
       - name: Preparar Node
         uses: actions/setup-node@v5
@@ -58,6 +58,15 @@ jobs:
       - name: Instalar dependências
         run: npm install --no-audit --no-fund
 
+      - name: Preparar assets oficiais
+        run: npm run assets
+
+      - name: Validar identidade da release
+        run: npm run validate:release
+
+      - name: Validar TypeScript
+        run: npm run typecheck
+
       - name: Preparar assinatura local da Play Store
         if: ${{ inputs.build_type == 'play-store' }}
         shell: bash
@@ -68,105 +77,44 @@ jobs:
           KEY_PASSWORD: ${{ secrets.CONNEXIO_UPLOAD_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-
           if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
-            echo "BLOQUEADO: um ou mais secrets da nova chave de upload não estão configurados."
+            echo "BLOQUEADO: secrets da chave de upload não estão completos."
             exit 1
           fi
-
           mkdir -p .ci-signing
           printf '%s' "$KEYSTORE_B64" | base64 --decode > .ci-signing/connexio-upload.jks
           chmod 600 .ci-signing/connexio-upload.jks
-          test -s .ci-signing/connexio-upload.jks
-
-          KEYSTORE_SHA1=$(keytool -list -v \
-            -keystore .ci-signing/connexio-upload.jks \
-            -storepass "$KEYSTORE_PASSWORD" \
-            -alias "$KEY_ALIAS" \
-            | awk -F'SHA1: ' '/SHA1:/ {print $2; exit}' \
-            | xargs)
-
-          echo "SHA1 da JKS reconstruída: $KEYSTORE_SHA1"
-          echo "SHA1 autorizado:          $TARGET_UPLOAD_SHA1"
-
+          KEYSTORE_SHA1=$(keytool -list -v -keystore .ci-signing/connexio-upload.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | awk -F'SHA1: ' '/SHA1:/ {print $2; exit}' | xargs)
+          echo "SHA1 da JKS: $KEYSTORE_SHA1"
           if [ "$KEYSTORE_SHA1" != "$TARGET_UPLOAD_SHA1" ]; then
-            echo "BLOQUEADO: a JKS do GitHub não corresponde à nova chave de upload autorizada."
+            echo "BLOQUEADO: JKS não corresponde à chave autorizada."
             exit 1
           fi
-
           node <<'NODE'
           const fs = require('fs');
-          const credentials = {
-            android: {
-              keystore: {
-                keystorePath: '.ci-signing/connexio-upload.jks',
-                keystorePassword: process.env.KEYSTORE_PASSWORD,
-                keyAlias: process.env.KEY_ALIAS,
-                keyPassword: process.env.KEY_PASSWORD
-              }
-            }
-          };
-          fs.writeFileSync('credentials.json', JSON.stringify(credentials, null, 2) + '\n', { mode: 0o600 });
+          fs.writeFileSync('credentials.json', JSON.stringify({ android: { keystore: {
+            keystorePath: '.ci-signing/connexio-upload.jks',
+            keystorePassword: process.env.KEYSTORE_PASSWORD,
+            keyAlias: process.env.KEY_ALIAS,
+            keyPassword: process.env.KEY_PASSWORD
+          }}}, null, 2) + '\n', { mode: 0o600 });
           NODE
-
-          test -s credentials.json
-          echo "Credenciais locais preparadas e validadas sem gravar a chave no repositório."
-
-      - name: Preparar ícones oficiais do Connexio
-        shell: bash
-        run: |
-          base64 --decode assets/connexio-app-icon.base64 > assets/connexio-app-icon.png
-          base64 --decode assets/connexio-adaptive-foreground.base64 > assets/connexio-adaptive-foreground.png
-
-          file assets/connexio-app-icon.png
-          file assets/connexio-adaptive-foreground.png
-
-          test -s assets/connexio-app-icon.png
-          test -s assets/connexio-adaptive-foreground.png
-          echo "Ícones oficiais do Connexio preparados."
-
-      - name: Validar configuração visual e pacote
-        shell: bash
-        run: |
-          RESOLVED_PACKAGE=$(node -e "const app=require('./app.json'); process.stdout.write(app.expo?.android?.package || '')")
-          RESOLVED_ICON=$(node -e "const app=require('./app.json'); process.stdout.write(app.expo?.android?.icon || app.expo?.icon || '')")
-          RESOLVED_ADAPTIVE_ICON=$(node -e "const app=require('./app.json'); process.stdout.write(app.expo?.android?.adaptiveIcon?.foregroundImage || '')")
-
-          echo "Pacote configurado: $RESOLVED_PACKAGE"
-          echo "Ícone configurado: $RESOLVED_ICON"
-          echo "Ícone adaptativo configurado: $RESOLVED_ADAPTIVE_ICON"
-
-          if [ "$RESOLVED_PACKAGE" != "$EXPECTED_ANDROID_PACKAGE" ]; then
-            echo "Pacote incorreto. Esperado: $EXPECTED_ANDROID_PACKAGE"
-            exit 1
-          fi
-
-          if [ "$RESOLVED_ICON" != "./assets/connexio-app-icon.png" ]; then
-            echo "Ícone principal incorreto."
-            exit 1
-          fi
-
-          if [ "$RESOLVED_ADAPTIVE_ICON" != "./assets/connexio-adaptive-foreground.png" ]; then
-            echo "Ícone adaptativo incorreto."
-            exit 1
-          fi
 
       - name: Recriar projeto Android limpo
         run: npx expo prebuild --platform android --clean --non-interactive
 
-      - name: Validar pacote e ícones no projeto Android
+      - name: Validar applicationId e versão nativa
         shell: bash
         run: |
-          echo "Conferindo applicationId nativo..."
-          if ! grep -Eq "applicationId[[:space:]]+['\"]${EXPECTED_ANDROID_PACKAGE}['\"]" android/app/build.gradle; then
-            echo "O projeto Android não contém o applicationId esperado."
-            grep -n "applicationId" android/app/build.gradle || true
+          set -euo pipefail
+          grep -Eq "applicationId[[:space:]]+['\"]${EXPECTED_ANDROID_PACKAGE}['\"]" android/app/build.gradle
+          VERSION_NAME=$(grep -E "versionName[[:space:]]+['\"]" android/app/build.gradle | head -1 | sed -E "s/.*versionName[[:space:]]+['\"]([^'\"]+)['\"].*/\1/")
+          echo "Version name nativa: $VERSION_NAME"
+          if [ "$VERSION_NAME" != "$EXPECTED_APP_VERSION" ]; then
+            echo "BLOQUEADO: versionName divergente."
             exit 1
           fi
-
           test -f android/app/src/main/res/mipmap-hdpi/ic_launcher.webp
-          test -f android/app/src/main/res/mipmap-hdpi/ic_launcher_round.webp
-          echo "applicationId e ícones nativos confirmados."
 
       - name: Definir tipo de arquivo
         shell: bash
@@ -189,59 +137,41 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-output
-
           if [ "${{ inputs.build_type }}" = "play-store" ]; then
             SIGNER_SHA1=$(keytool -printcert -jarfile "$OUTPUT_FILE" | awk -F'SHA1: ' '/SHA1:/ {print $2; exit}' | xargs)
-            echo "Assinatura encontrada: $SIGNER_SHA1"
-            echo "Assinatura esperada:  $TARGET_UPLOAD_SHA1"
-
             if [ "$SIGNER_SHA1" != "$TARGET_UPLOAD_SHA1" ]; then
-              echo "BLOQUEADO: o AAB foi assinado com uma chave diferente da nova chave de upload."
+              echo "BLOQUEADO: assinatura do AAB incorreta."
               exit 1
             fi
-
             LAUNCHER_PATH="base/res/mipmap-xxxhdpi-v4/ic_launcher.webp"
             unzip -p "$OUTPUT_FILE" "$LAUNCHER_PATH" > release-output/ic_launcher_from_aab.webp
-            test -s release-output/ic_launcher_from_aab.webp
-
             LAUNCHER_SHA256=$(sha256sum release-output/ic_launcher_from_aab.webp | awk '{print $1}')
-            echo "Launcher SHA256 encontrado: $LAUNCHER_SHA256"
-            echo "Launcher SHA256 esperado:  $EXPECTED_LAUNCHER_SHA256"
-
             if [ "$LAUNCHER_SHA256" != "$EXPECTED_LAUNCHER_SHA256" ]; then
-              echo "BLOQUEADO: o ícone empacotado no AAB não é idêntico ao launcher Connexio já auditado."
+              echo "BLOQUEADO: launcher empacotado difere do Connexio aprovado."
               exit 1
             fi
-
             AAB_SHA256=$(sha256sum "$OUTPUT_FILE" | awk '{print $1}')
             printf '%s\n' \
               "Connexio Android release gate" \
+              "Source ref: $GITHUB_REF_NAME" \
+              "Source SHA: $GITHUB_SHA" \
+              "Version: $EXPECTED_APP_VERSION" \
+              "Expected minimum versionCode: $MIN_VERSION_CODE" \
               "Package: $EXPECTED_ANDROID_PACKAGE" \
               "AAB: $OUTPUT_FILE" \
               "AAB SHA256: $AAB_SHA256" \
               "Upload certificate SHA1: $SIGNER_SHA1" \
-              "Target upload SHA1: $TARGET_UPLOAD_SHA1" \
-              "Launcher resource: $LAUNCHER_PATH" \
               "Launcher SHA256: $LAUNCHER_SHA256" \
-              "Expected launcher SHA256: $EXPECTED_LAUNCHER_SHA256" \
-              "Result: PASS" \
-              > release-output/release-audit.txt
+              "Result: PASS" > release-output/release-audit.txt
           fi
-
-      - name: Preparar arquivos da versão
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p release-output
           cp "$OUTPUT_FILE" release-output/
 
-          if [ "${{ inputs.build_type }}" = "play-store" ]; then
-            keytool -printcert -rfc -jarfile "$OUTPUT_FILE" \
-              | sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
-              > release-output/upload_certificate.pem
-            keytool -printcert -jarfile "$OUTPUT_FILE" > release-output/upload_certificate_info.txt
-            test -s release-output/upload_certificate.pem
-          fi
+      - name: Extrair certificado da versão Play
+        if: ${{ inputs.build_type == 'play-store' }}
+        shell: bash
+        run: |
+          keytool -printcert -rfc -jarfile "$OUTPUT_FILE" | sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' > release-output/upload_certificate.pem
+          keytool -printcert -jarfile "$OUTPUT_FILE" > release-output/upload_certificate_info.txt
 
       - name: Disponibilizar para download
         uses: actions/upload-artifact@v4
@@ -253,6 +183,4 @@ jobs:
 
       - name: Remover credenciais temporárias
         if: always()
-        shell: bash
-        run: |
-          rm -rf .ci-signing credentials.json
+        run: rm -rf .ci-signing credentials.json

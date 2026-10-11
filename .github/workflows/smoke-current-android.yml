@@ -1,0 +1,58 @@
+name: Diagnose current Connexio Android
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/smoke-current-android.yml'
+  push:
+    branches:
+      - agent/connexio-gestor-foundation
+    paths:
+      - '.github/workflows/smoke-current-android.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download already-built 0.4.2 APK
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: HenriqueGuilhermeUx/connexio
+          run-id: 32401833550
+          name: Connexio-APK-0.4.2
+          path: apk
+
+      - name: Show APK
+        run: find apk -type f -maxdepth 2 -ls
+
+      - name: Launch current APK on clean Android
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb logcat -c
+            adb install -r apk/Connexio-0.4.2-preview.apk
+            adb shell monkey -p br.com.alternativeventures.connexio -c android.intent.category.LAUNCHER 1
+            sleep 10
+            adb shell pidof br.com.alternativeventures.connexio > /tmp/connexio-pid.txt || true
+            cat /tmp/connexio-pid.txt
+            adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' || true
+            echo '===== RELEVANT LOGCAT ====='
+            adb logcat -d | grep -E -i 'FATAL EXCEPTION|AndroidRuntime|ReactNativeJS|SoLoader|connexio|Expo|Hermes' | tail -n 500 || true
+            test -s /tmp/connexio-pid.txt
+            echo 'CURRENT RELEASE SURVIVED STARTUP'

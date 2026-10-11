@@ -1,14 +1,29 @@
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { useApp } from '@/context/AppContext';
+import { supabase } from '@/lib/supabase';
 import { colors } from '@/theme/colors';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function ProfileScreen() {
-  const { member, listings, logout } = useApp();
+  const { member, listings, lodge, membership, logout } = useApp();
+  const [isAdmin, setIsAdmin] = useState(false);
   const ownListings = listings.filter((listing) => listing.ownerId === member?.id);
+  const canManage = membership?.role === 'WORSHIPFUL_MASTER' || membership?.role === 'SECRETARY' || membership?.role === 'TREASURER';
+  const canOpenGestor = member?.status === 'APPROVED';
+
+  useEffect(() => {
+    if (!supabase || !member) {
+      setIsAdmin(false);
+      return;
+    }
+    void supabase.rpc('is_connexio_admin').then(({ data, error }) => {
+      if (!error) setIsAdmin(Boolean(data));
+    });
+  }, [member?.id]);
 
   const leave = () => {
     logout();
@@ -35,6 +50,28 @@ export default function ProfileScreen() {
         <View style={styles.stat}><Text style={styles.statValue}>{member?.city ?? '—'}</Text><Text style={styles.statLabel}>Cidade</Text></View>
       </View>
 
+      {member?.status === 'APPROVED' && lodge && membership ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Minha Loja</Text>
+          <Button label="Abrir Central da Loja" onPress={() => router.push('/lodge-hub')} />
+          <Text style={styles.helper}>Comunicados, sessões, educação e documentos compartilhados pela gestão.</Text>
+          <Button label="Abrir carteirinha digital" variant="secondary" onPress={() => router.push('/member-card')} />
+          <Text style={styles.helper}>QR verificável, revogável e sem expor dados pessoais sensíveis.</Text>
+        </View>
+      ) : null}
+
+      {canOpenGestor ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Connexio Gestor</Text>
+          <Button label={canManage ? 'Abrir Connexio Gestor' : 'Cadastrar ou assumir uma Loja'} variant="secondary" onPress={() => router.push('/manager')} />
+          <Text style={styles.helper}>
+            {canManage
+              ? 'Gestor Free para rotina da comunidade e Gestor Pro para operação, estratégia, pessoas e tesouraria.'
+              : 'Abra o Gestor para cadastrar ou assumir uma Loja e solicitar seu acesso como Venerável, Secretário ou Tesoureiro.'}
+          </Text>
+        </View>
+      ) : null}
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Dados validados</Text>
         <View style={styles.infoCard}>
@@ -45,11 +82,14 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Operação</Text>
-        <Button label="Abrir painel administrativo" variant="secondary" onPress={() => router.push('/admin')} />
-        <Text style={styles.adminNote}>Acesso visível apenas no protótipo para validar o fluxo de aprovação.</Text>
-      </View>
+      {isAdmin ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Admin Connexio</Text>
+          <Button label="Membros e gestores" variant="secondary" onPress={() => router.push('/admin')} />
+          <Button label="Ativações Gestor Pro" variant="secondary" onPress={() => router.push('/admin-pro')} />
+          <Text style={styles.adminNote}>Seu papel de Admin geral é separado da gestão das Lojas.</Text>
+        </View>
+      ) : null}
 
       <Button label="Sair da conta" variant="danger" onPress={leave} />
     </Screen>
@@ -83,6 +123,7 @@ const styles = StyleSheet.create({
   statDivider: { width: 1, backgroundColor: colors.border },
   section: { gap: 12 },
   sectionTitle: { color: colors.text, fontSize: 17, fontWeight: '800' },
+  helper: { color: colors.textMuted, fontSize: 11, lineHeight: 16, textAlign: 'center' },
   infoCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, overflow: 'hidden' },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 15, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   infoIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },

@@ -1,6 +1,13 @@
 export type ListingType = 'SERVICE' | 'PRODUCT';
 export type PriceType = 'FIXED' | 'FROM' | 'ON_REQUEST';
 export type MemberStatus = 'GUEST' | 'PENDING' | 'APPROVED';
+export type LodgePlan = 'FREE' | 'PRO';
+export type LodgeRole = 'MEMBER' | 'SECRETARY' | 'TREASURER' | 'WORSHIPFUL_MASTER';
+export type MembershipStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING';
+export type ManagementRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type FinancialEntryType = 'PAYABLE' | 'RECEIVABLE';
+export type FinancialEntryStatus = 'OPEN' | 'PAID' | 'OVERDUE';
+export type ChargeStatus = 'DRAFT' | 'PENDING' | 'PAID' | 'CANCELLED';
 
 export type Listing = {
   id: string;
@@ -32,4 +39,123 @@ export type Member = {
   lodge: string;
   cimMasked: string;
   status: MemberStatus;
+};
+
+export type Lodge = {
+  id: string;
+  name: string;
+  number?: string;
+  orient: string;
+  region: string;
+  plan: LodgePlan;
+  verified: boolean;
+};
+
+export type Membership = {
+  id: string;
+  memberId: string;
+  lodgeId: string;
+  role: LodgeRole;
+  status: MembershipStatus;
+  joinedAt?: string;
+  verifiedAt?: string;
+};
+
+export type LodgeMember = {
+  id: string;
+  name: string;
+  email: string;
+  whatsapp?: string;
+  role: LodgeRole;
+  status: MembershipStatus;
+};
+
+export type ManagementRequest = {
+  id: string;
+  requesterId: string;
+  requesterName: string;
+  requesterEmail: string;
+  lodgeName: string;
+  lodgeNumber?: string;
+  orient: string;
+  region: string;
+  requestedRole: Extract<LodgeRole, 'SECRETARY' | 'TREASURER' | 'WORSHIPFUL_MASTER'>;
+  evidenceName: string;
+  evidencePath?: string;
+  evidenceType: 'POSSESSION_TERM' | 'APPOINTMENT' | 'OTHER';
+  notes?: string;
+  status: ManagementRequestStatus;
+  createdAt: string;
+  decidedAt?: string;
+};
+
+export type Announcement = {
+  id: string;
+  lodgeId: string;
+  title: string;
+  message: string;
+  priority: 'NORMAL' | 'IMPORTANT';
+  pushRequested: boolean;
+  createdAt: string;
+};
+
+export type LodgeEvent = {
+  id: string;
+  lodgeId: string;
+  title: string;
+  description?: string;
+  startsAt: string;
+  location?: string;
+  requiresRegistration: boolean;
+  attendeeIds: string[];
+};
+
+export type PollOption = {
+  id: string;
+  label: string;
+  votes: number;
+};
+
+export type Poll = {
+  id: string;
+  lodgeId: string;
+  question: string;
+  options: PollOption[];
+  closesAt?: string;
+  active: boolean;
+  totalVotes: number;
+};
+
+export type FinancialEntry = {
+  id: string;
+  lodgeId: string;
+  type: FinancialEntryType;
+  description: string;
+  category: string;
+  amount: number;
+  dueDate: string;
+  status: FinancialEntryStatus;
+  recurring: boolean;
+  attachmentName?: string;
+  paidAt?: string;
+};
+
+export type Charge = {
+  id: string;
+  lodgeId: string;
+  memberId?: string;
+  memberName: string;
+  description: string;
+  amount: number;
+  dueDate: string;
+  status: ChargeStatus;
+  pixReference?: string;
+};
+
+export type MemberCredential = {
+  memberId: string;
+  membershipId: string;
+  lodgeId: string;
+  issuedAt: string;
+  version: number;
 };
