@@ -1,0 +1,65 @@
+{
+  "id": "/welcome",
+  "name": "Connexio",
+  "short_name": "Connexio",
+  "description": "Rede privada de negócios e gestão para membros e Lojas.",
+  "start_url": "/welcome",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#081526",
+  "theme_color": "#081526",
+  "lang": "pt-BR",
+  "categories": [
+    "business",
+    "social",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/connexio-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Explorar",
+      "short_name": "Explorar",
+      "url": "/explore",
+      "icons": [
+        {
+          "src": "/connexio-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Publicar",
+      "short_name": "Publicar",
+      "url": "/publish",
+      "icons": [
+        {
+          "src": "/connexio-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Perfil",
+      "short_name": "Perfil",
+      "url": "/profile",
+      "icons": [
+        {
+          "src": "/connexio-icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}
