@@ -1,0 +1,27 @@
+name: Connexio Production PWA CI
+on:
+  pull_request:
+    branches:
+      - agent/connexio-gestor-foundation
+  push:
+    branches:
+      - pwa-rollout-production-2026-10-11
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --silent --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run validate:release
+      - run: npm run build:web
+      - name: Validate PWA output
+        run: |
+          test -f dist/index.html
+          test -f dist/manifest.webmanifest
+          test -f dist/sw.js
+          grep -q 'Connexio' dist/manifest.webmanifest
