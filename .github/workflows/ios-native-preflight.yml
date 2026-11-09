@@ -39,7 +39,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          WORKSPACE="$(find ios -maxdepth 2 -name '*.xcworkspace' -type d | head -1)"
+          WORKSPACE="$(find ios -maxdepth 1 -name '*.xcworkspace' -type d | head -1)"
           test -n "$WORKSPACE"
           SCHEME="$(basename "$WORKSPACE" .xcworkspace)"
           xcodebuild -list -workspace "$WORKSPACE"
