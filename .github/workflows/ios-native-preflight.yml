@@ -1,0 +1,62 @@
+name: Connexio native iOS simulator preflight (unsigned)
+
+on:
+  pull_request:
+    paths:
+      - 'app.json'
+      - 'app/**'
+      - 'src/**'
+      - 'package.json'
+      - '.github/workflows/ios-native-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: connexio-native-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate native iOS project without signing
+        env:
+          CI: '1'
+        run: npx expo prebuild --platform ios --no-install
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install
+      - name: Build unsigned iOS simulator application
+        shell: bash
+        run: |
+          set -euo pipefail
+          WORKSPACE="$(find ios -maxdepth 2 -name '*.xcworkspace' -type d | head -1)"
+          test -n "$WORKSPACE"
+          SCHEME="$(basename "$WORKSPACE" .xcworkspace)"
+          xcodebuild -list -workspace "$WORKSPACE"
+          xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO -derivedDataPath "$RUNNER_TEMP/connexio-derived" build 2>&1 | tee ios-native-build.log
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connexio-native-ios-log
+          path: ios-native-build.log
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload unsigned simulator app
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connexio-ios-simulator-app
+          path: ${{ runner.temp }}/connexio-derived/Build/Products/Debug-iphonesimulator/*.app
+          if-no-files-found: error
+          retention-days: 7
