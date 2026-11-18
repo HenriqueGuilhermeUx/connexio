@@ -1,0 +1,40 @@
+name: Connexio iOS JS preflight (unsigned)
+on:
+  pull_request:
+    paths:
+      - 'app.json'
+      - 'app/**'
+      - 'src/**'
+      - 'package.json'
+      - '.github/workflows/ios-js-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: connexio-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios-js:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Validate Expo iOS app
+        run: npm run typecheck
+      - name: Export unsigned iOS JS bundle
+        run: npx expo export --platform ios --output-dir dist-ios-preflight
+      - name: Upload iOS JS bundle
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connexio-ios-js-bundle
+          path: dist-ios-preflight/
+          retention-days: 7
