@@ -74,7 +74,7 @@ jobs:
           echo "PASS: Connexio iPad device family in compiled binary"
       - name: Install and launch on iPad simulator
         shell: bash
-        timeout-minutes: 14
+        timeout-minutes: 22
         run: |
           set -euo pipefail
           APP_PATH="$(find "$RUNNER_TEMP/connexio-derived/Build/Products/Debug-iphonesimulator" -maxdepth 1 -type d -name '*.app' | head -n 1)"
@@ -82,14 +82,31 @@ jobs:
           BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$APP_PATH/Info.plist")"
           test "$BUNDLE_ID" = "br.com.connexio.app"
           DEVICE_ID="$(xcrun simctl list devices available -j | node -e 'let x="";process.stdin.on("data",d=>x+=d);process.stdin.on("end",()=>{const ds=Object.values(JSON.parse(x).devices).flat();const d=ds.find(x=>x.isAvailable&&x.name.startsWith("iPad"));if(!d)process.exit(1);console.log(d.udid)})')"
+          export DEVICE_ID BUNDLE_ID
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl bootstatus "$DEVICE_ID" -b
           xcrun simctl install "$DEVICE_ID" "$APP_PATH"
           xcrun simctl launch "$DEVICE_ID" "$BUNDLE_ID"
           sleep 5
           xcrun simctl io "$DEVICE_ID" screenshot "$RUNNER_TEMP/connexio-ipad-launch.png"
-          xcrun simctl terminate "$DEVICE_ID" "$BUNDLE_ID" || true
-          xcrun simctl shutdown "$DEVICE_ID" || true
+          # The screenshot and launch are the required smoke evidence.
+          # Hosted macOS may stall on cleanup even after launch/screenshot succeed.
+          # Run bounded cleanup without concealing failures above.
+          python3 - <<'PY'
+          import os, subprocess
+          device = os.environ["DEVICE_ID"]
+          bundle = os.environ["BUNDLE_ID"]
+          for label, args in (
+              ("terminate", ["xcrun", "simctl", "terminate", device, bundle]),
+              ("shutdown", ["xcrun", "simctl", "shutdown", device]),
+          ):
+              try:
+                  result = subprocess.run(args, timeout=20, capture_output=True, text=True)
+                  if result.returncode:
+                      print(f"CLEANUP_WARNING {label}: {(result.stdout + result.stderr)[-500:]}", flush=True)
+              except subprocess.TimeoutExpired:
+                  print(f"CLEANUP_TIMEOUT {label}: bounded after 20s; launch and screenshot already recorded", flush=True)
+          PY
           echo "PASS: iPad launch with screenshot; functional QA remains separate"
       - name: Upload iPad simulator screenshot
         if: always()
